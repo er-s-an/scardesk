@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-12T20:05:46.108Z",
+  "trader": "2XVDvivTXF8f51C24qqrA3SJqv6yqJ7RhRZKZ83Lsziq",
+  "program": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "oraclePush": "3ufCmXf6PiW9ApDhg2Lzc2aqyAMSgpShfHtdZuTcmXjaMSJo3cuCJfsDjYq9nxVSjM7Jz2qALhHCmzpamL36w2cq",
+  "open": "5ikVxiERHHKzsxYJzkwpr2vqpEruRGm1NVg83wgKRrsfPC6nkbFx9JdhKnyhbejbZW7t7A66thYRfgDc317nqy1L",
+  "close": "ifTxePP6YJZXV8g92pLBC4Q7wTC7eVYuyKurKaBSNiPxZLsyjps1Z5NU7nsVHEA2rmdaAARYwb2m7BeSzfQo2NA",
+  "explorer": {
+    "oracle": "https://explorer.solana.com/tx/3ufCmXf6PiW9ApDhg2Lzc2aqyAMSgpShfHtdZuTcmXjaMSJo3cuCJfsDjYq9nxVSjM7Jz2qALhHCmzpamL36w2cq?cluster=devnet",
+    "open": "https://explorer.solana.com/tx/5ikVxiERHHKzsxYJzkwpr2vqpEruRGm1NVg83wgKRrsfPC6nkbFx9JdhKnyhbejbZW7t7A66thYRfgDc317nqy1L?cluster=devnet",
+    "close": "https://explorer.solana.com/tx/ifTxePP6YJZXV8g92pLBC4Q7wTC7eVYuyKurKaBSNiPxZLsyjps1Z5NU7nsVHEA2rmdaAARYwb2m7BeSzfQo2NA?cluster=devnet"
+  }
+}

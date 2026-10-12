@@ -1,3 +1,22 @@
+STATUS = Sign-loop proof: browser faucet+deposit + scripted open/close on Devnet. Not submitted.
+
+Checked 2026-10-13 ~04:05 HKT. No Colosseum Submit.
+
+## Browser path (Pages + browser key BJNU…qhXe)
+- Mobile UI fixed (`7a37ee6`).
+- Funded 0.05 SOL; init / faucet 1000 dUSD / deposit 100 dUSD confirmed.
+- Open blocked in UI when OnFinality 429 aged the mark past oracleMaxAge 120s.
+
+## Scripted open/close (same program, fresh trader `2XVDviv…Lsziq`)
+Proof: `app/demo/signloop-proof.json`
+- oracle push: https://explorer.solana.com/tx/3ufCmXf6PiW9ApDhg2Lzc2aqyAMSgpShfHtdZuTcmXjaMSJo3cuCJfsDjYq9nxVSjM7Jz2qALhHCmzpamL36w2cq?cluster=devnet
+- open long 10 dUSD ×5: https://explorer.solana.com/tx/5ikVxiERHHKzsxYJzkwpr2vqpEruRGm1NVg83wgKRrsfPC6nkbFx9JdhKnyhbejbZW7t7A66thYRfgDc317nqy1L?cluster=devnet
+- close: https://explorer.solana.com/tx/ifTxePP6YJZXV8g92pLBC4Q7wTC7eVYuyKurKaBSNiPxZLsyjps1Z5NU7nsVHEA2rmdaAARYwb2m7BeSzfQo2NA?cluster=devnet
+
+Remaining ops risk: public Pages open still needs a mark younger than 120s; OnFinality rate limits can miss the window. Desk publisher should keep pushing.
+
+---
+
 STATUS = Public SOL loop honesty pass. Program upgraded on Devnet. trade.html is the entry. Not submitted.
 
 Checked 2026-10-13. This build did not Submit. No mainnet. No user-interview numbers.
