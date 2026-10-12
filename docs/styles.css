@@ -932,6 +932,13 @@ body.trade .lev-chips button.hot.on {
   background: var(--up);
   color: var(--color-on-accent);
 }
+body.trade .ticket-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: end;
+}
+body.trade .ticket-grid .span { grid-column: 1 / -1; }
 body.trade .quote-preview {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -998,13 +1005,81 @@ body.trade .pos td .ghost { min-height: 36px; }
       "account"
       "log";
     padding: 0 16px 20px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
   }
-  body.trade #ticket { position: static; }
+  body.trade #ticket { position: static; min-width: 0; }
   body.trade .connect-row { grid-template-columns: 1fr; }
   body.trade .mast .wallets button:not(#btn-disconnect) { display: none; }
-  body.trade .lev-chips button { flex: 1 1 12%; min-width: 0; padding: 4px 4px; }
-  body.trade #chart .chart-wrap { height: 220px; min-height: 180px; }
+  body.trade .lev-chips button { flex: 1 1 18%; min-width: 44px; padding: 4px 6px; }
+  body.trade #chart .chart-wrap { height: 200px; min-height: 160px; max-height: 42vh; }
   body.trade .account-layout { grid-template-columns: 1fr; }
   body.trade h1 { font-size: 1.75rem; }
-  body.trade .q-px { font-size: 1.85rem; }
+  body.trade .q-px { font-size: 1.85rem; word-break: break-all; }
+  body.trade .steps {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    overflow: hidden;
+  }
+  body.trade .steps li {
+    min-width: 0;
+    padding: 6px 0 8px;
+  }
+  body.trade .steps li em {
+    font-size: 11px;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  body.trade .ticket-grid,
+  body.trade .quote-preview,
+  body.trade .stats {
+    grid-template-columns: 1fr 1fr;
+    min-width: 0;
+  }
+  body.trade .panel,
+  body.trade .mast,
+  body.trade .trade-strip {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  body.trade .trade-strip #desk-meta,
+  body.trade .link-state,
+  body.trade #prog-link {
+    word-break: break-all;
+  }
+  body.trade input,
+  body.trade select {
+    font-size: 16px; /* prevent iOS zoom + layout jump */
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  body.trade .mast {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  body.trade .quote { text-align: left; }
+  body.trade .q-meta { justify-content: flex-start; }
+  body.trade .steps {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  body.trade .steps li b { font-size: 9px; }
+  body.trade .steps li em { font-size: 10px; }
+  body.trade .ticket-grid,
+  body.trade .quote-preview {
+    grid-template-columns: 1fr;
+  }
+  body.trade .sides { grid-template-columns: 1fr 1fr; }
+  body.trade #btn-open { width: 100%; }
+  body.trade .lev-chips button { flex: 1 1 22%; }
+  body.trade main.trade-grid { padding: 0 12px 24px; }
+  body.trade .trade-strip,
+  body.trade .trade-risk,
+  body.trade footer { margin-left: 12px; margin-right: 12px; }
+  body.trade .mast { padding: 12px; }
 }
