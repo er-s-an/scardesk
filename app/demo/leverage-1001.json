@@ -1,0 +1,25 @@
+{
+  "ok": true,
+  "at": "2026-10-12T04:53:11.000Z",
+  "network": "devnet",
+  "rpc": "https://solana-devnet.api.onfinality.io/public",
+  "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "maxLeverage": 1001,
+  "desk": "7z22VzGm4uFncPvY2DKHKYbUESEhb6bP8AfoRt3k3WPP",
+  "signatures": {
+    "setMaxLeverage": "4pfphmLxcviboE3erQmvvHdnVNCrYHWhwyUqdXSjizsALLFMcvcpQcUQZhWfovcHqw2wh9Sni3g8yvoFjapErS7J",
+    "leverage1001": "54Trr1rjm85dtp4aigy6n5GFE3NjHfTU1x22L9vGu3SqVrz7yC4t6ThiHXYnRdcsSVLRBr1xziCty3PhJ5LQXiD8"
+  },
+  "explorer": {
+    "setMaxLeverage": "https://explorer.solana.com/tx/4pfphmLxcviboE3erQmvvHdnVNCrYHWhwyUqdXSjizsALLFMcvcpQcUQZhWfovcHqw2wh9Sni3g8yvoFjapErS7J?cluster=devnet",
+    "leverage1001": "https://explorer.solana.com/tx/54Trr1rjm85dtp4aigy6n5GFE3NjHfTU1x22L9vGu3SqVrz7yC4t6ThiHXYnRdcsSVLRBr1xziCty3PhJ5LQXiD8?cluster=devnet",
+    "desk": "https://explorer.solana.com/address/7z22VzGm4uFncPvY2DKHKYbUESEhb6bP8AfoRt3k3WPP?cluster=devnet",
+    "program": "https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet"
+  },
+  "deskAfter": {
+    "maxLeverage": 1001,
+    "lpCash": "0"
+  },
+  "openNote": "opened 1001× long margin=1",
+  "deploySlot": 510149272
+}

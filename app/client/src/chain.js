@@ -20,7 +20,8 @@ const {
 const math = require("./math");
 const layout = require("./layout");
 
-const APP_ROOT = path.resolve(__dirname, "../..");
+const __d = typeof __dirname !== "undefined" ? __dirname : ".";
+const APP_ROOT = path.resolve(__d, "../..");
 const TOKEN_PROGRAM_ID = new PublicKey("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
 const CONFIG_PATH = path.join(APP_ROOT, "config", "deployment.json");
 const PARAMS_PATH = path.join(APP_ROOT, "config", "params.json");

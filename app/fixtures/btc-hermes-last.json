@@ -1,0 +1,42 @@
+{
+  "ok": true,
+  "market": "BTC/USD",
+  "source": "pyth-account-pro",
+  "cluster": "devnet",
+  "account": "APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5",
+  "rpc": "https://solana-devnet.api.onfinality.io/public",
+  "feed": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+  "price": "8321729028033",
+  "expo": -8,
+  "conf": "6703971967",
+  "publishTime": "1791805664",
+  "attempts": [
+    {
+      "source": "hermes",
+      "status": 401,
+      "market": "BTC/USD",
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-benchmarks",
+      "status": 401,
+      "market": "BTC/USD",
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-account",
+      "cluster": "devnet",
+      "account": "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo",
+      "status": 429,
+      "error": "Too Many Requests, Please apply an OnFinality API key or contact us to receive a higher rate limit"
+    },
+    {
+      "source": "pyth-account-pro",
+      "cluster": "devnet",
+      "account": "APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5",
+      "status": 200
+    }
+  ],
+  "note": "Sponsored Pyth BTC/USD account on devnet. Hermes still returns 401 without PYTH_API_KEY.",
+  "at": "2026-10-12T11:47:54.923Z"
+}

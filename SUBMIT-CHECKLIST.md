@@ -18,22 +18,24 @@ Deadline target: **2026-10-13 ~14:59 HKT** (prefer a revisable upload earlier).
 - [ ] Track: **Solana Ecosystem**
 - [ ] Explicit user nod to Submit (this checklist alone is not permission)
 
-### B. Public Devnet program (currently BLOCKED)
+### B. Public Devnet program (LIVE as of 2026-10-12 ~15:30 HKT)
 
-- [ ] Admin funded ≥ **~3.2 SOL** on the Devnet RPC used for deploy (rent floor for upgradeable program + buffer)
-- [ ] `npm run proof` (or equivalent) succeeds
-- [ ] `app/demo/public-proof.json` has `"ok": true`
-- [ ] `app/config/deployment.devnet.json` exists with program id + mints + desk accounts
-- [ ] Program id and **at least one SCAR mint tx** + **at least one queue write tx** have **public explorer** links (paste real sigs only — do not invent)
-- [ ] Desk can start with `SCARDESK_NETWORK=devnet` and footer shows Devnet / OnFinality (or chosen RPC)
-- [ ] `SCARDESK_ACTIVATE` left unset unless intentionally pointing default `deployment.json` at public (document the choice)
-- [ ] `SCARDESK_ALLOW_MAINNET` unset; no mainnet USDC claims
+- [x] Admin funded ≥ **~3.2 SOL** on the Devnet RPC used for deploy (live read ~3.37 SOL on `FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U`)
+- [x] Public proof landed (`app/demo/public-proof.json` → `"ok": true`)
+- [x] `app/config/deployment.devnet.json` exists with program id + mints + desk accounts
+- [x] Program id + SCAR mint + queue write have public explorer links (see `public-proof.json` / `PITCH.md`)
+- [x] Desk starts with `SCARDESK_NETWORK=devnet` / `npm run desk:devnet` (footer Devnet · OnFinality)
+- [x] `SCARDESK_ACTIVATE` left unset; default `deployment.json` stays localnet
+- [x] `SCARDESK_ALLOW_MAINNET` unset; no mainnet USDC claims
+- [x] Pages trade desk: https://er-s-an.github.io/scardesk/trade.html (IX 17 permissionless `demo_faucet`)
 
-**Current blocker (2026-10-12):** Admin `FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U` = **0 lamports** on reachable Devnet. Airdrop paths failed (OnFinality disabled, faucet Turnstile, testnet 429, etc.). See `STATUS.md` / `HOW-TO-RUN.md`.
+**Residual (not a deploy blocker):** OnFinality public RPC can 429 on send/confirm; toast asks retry. Hermes still 401 without `PYTH_API_KEY` (sponsored Pyth account labeled). Hard-refresh retest of Pages signing loop still waiting on Caesar before Submit.
+
+**Local media (2026-10-12 ~19:11 HKT, not Submit-green until reviewed + uploaded):** pitch `videos/scardesk-agent-market-huashu.mp4` (~2:40); demo `videos/scardesk-demo.mp4` (~2:48); logo `docs/scardesk-logo.png`. See `videos/DELIVERY.md`.
 
 ### C. Desk URL & wallet flow
 
-- [ ] Public or judge-reachable desk URL (not only `127.0.0.1:8787`), **or** a recorded demo that clearly shows Devnet explorer settles
+- [x] Public or judge-reachable desk URL: https://er-s-an.github.io/scardesk/trade.html (plus explorer settle proofs). Local desk still at `127.0.0.1:8787`
 - [ ] Wallet path: connect → faucet/deposit demo stable → open → close
 - [ ] Loss path shows **SCAR minted**
 - [ ] Win-with-empty-LP path shows **FIFO queue** write
@@ -43,12 +45,12 @@ Deadline target: **2026-10-13 ~14:59 HKT** (prefer a revisable upload earlier).
 
 ### D. GitHub & artifacts
 
-- [ ] Public repo **`https://github.com/er-s-an/scardesk`** (or private + access for `hackathon@colosseum.com`)
+- [x] Public repo **`https://github.com/er-s-an/scardesk`** (Pages published from it)
 - [ ] README matches honest status (local vs Devnet; provisional B1–B10)
 - [ ] No secrets / private keys committed
-- [ ] Logo or product graphic attached
-- [ ] Pitch video **2–3 min** uploaded / linked
-- [ ] Demo video **≤3 min** uploaded / linked (on-chain settle visible)
+- [ ] Logo or product graphic attached (local draft: `docs/scardesk-logo.png` — not uploaded)
+- [ ] Pitch video **2–3 min** uploaded / linked (local draft: `videos/scardesk-agent-market-huashu.mp4` ~2:40 — not uploaded)
+- [ ] Demo video **≤3 min** uploaded / linked (local draft: `videos/scardesk-demo.mp4` ~2:48 — not uploaded)
 - [ ] `SUBMISSION.md` fields pasted into portal (edit Devnet/explorer placeholders to real values only)
 
 ### E. Honesty gates (fail = do not Submit)
@@ -81,7 +83,7 @@ These support the draft but **do not** clear public Submit:
 | Verify settlement script | `README.md` worked example; `app/demo/last-run.json` |
 | Screenshots | `app/demo/browser/` |
 | Gap matrix | `GAP-CHECKLIST.md` (A11/A17/F3 still Gap until Devnet) |
-| Public proof file | `app/demo/public-proof.json` → `ok: false` |
+| Public proof file | `app/demo/public-proof.json` → `ok: true` (Devnet) |
 
 ---
 

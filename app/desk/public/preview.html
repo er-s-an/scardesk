@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-Hans">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Scardesk — read-only preview</title>
+  <meta name="description" content="Scardesk — read-only Devnet preview. Synthetic perps desk. Live trading is local (:8787).">
+  <title>Scardesk — 只读预览</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -14,208 +15,487 @@
     <div class="brand">
       <span class="mark" aria-hidden="true"></span>
       <div>
-        <p class="eyebrow">SOL/USD desk</p>
+        <p class="eyebrow" data-i18n="eyebrow">SOL/USD 交易台</p>
         <h1>Scardesk</h1>
       </div>
     </div>
     <div class="quote">
-      <div class="q-label">Mark</div>
+      <div class="q-label" data-i18n="mark">标记价</div>
       <div class="q-px up">111.43189453</div>
       <div class="q-meta">
-        <span class="pill pyth">pyth · provisional</span>
-        <span class="delta up">red = up</span>
+        <span class="pill pyth" data-i18n="pyth">pyth · 暂定</span>
+        <span class="delta up" data-i18n="redUp">红 = 涨</span>
       </div>
-      <p class="fine px-note">Frozen read. Sponsored Pyth SOL/USD on devnet, clock-stamped onto the local desk. Hermes still needs PYTH_API_KEY. Ash is down.</p>
+      <p class="fine px-note" data-i18n="pxNote">冻结读数。Devnet 上赞助的 Pyth SOL/USD，打上时钟戳后写入本机 desk。Hermes 仍需 PYTH_API_KEY。灰为跌。</p>
     </div>
     <div class="who-col">
-      <div class="wallets" aria-label="Wallets, disabled on this page">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="lang-zh" class="on" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" id="lang-en" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <div class="wallets" data-i18n-aria="walletsAria" aria-label="钱包（本页禁用）">
         <button type="button" disabled>Phantom</button>
         <button type="button" disabled>Solflare</button>
-        <button type="button" disabled>Browser key</button>
+        <button type="button" disabled data-i18n="browserKey">浏览器密钥</button>
       </div>
-      <nav class="actors" aria-label="Whose desk">
+      <nav class="actors" data-i18n-aria="actorsAria" aria-label="谁的交易台">
         <button type="button" class="on" disabled>Alice</button>
         <button type="button" disabled>Bob</button>
-        <button type="button" disabled>Alice session</button>
+        <button type="button" disabled data-i18n="aliceSession">Alice 会话</button>
       </nav>
-      <p class="link-state" data-phase="idle">Read-only · localnet snapshot · nothing on this page signs</p>
-      <p class="fine">Copied from the local ledger at 2026-10-12T00:54:43Z. The live desk is the one that connects a wallet.</p>
+      <p class="link-state" data-phase="idle" data-i18n="linkState">只读 · Devnet 程序已上线 · 本页不签名</p>
+      <p class="fine" data-i18n="whoFine">本地账本快照。Devnet 程序 E7kH2K4Y…WXF4b 已部署；1001× 已验证。真交易在本机连接钱包。</p>
     </div>
   </header>
 
   <div class="risk" role="note">
-    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. This page is a picture of that desk. It does not send a transaction.</p>
-    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。本页只读，不签名、不结算。</p>
+    <p data-i18n="riskEn"><strong>合成永续 · 亏损注资 LP · FIFO 兑付。</strong>仅隔离保证金。不可部分平仓、不可追加。1001× 下几个基点即可清算全部保证金。本页是该交易台的画面，不发送任何交易。</p>
+    <p class="zh-only" data-i18n="riskZh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。本页只读，不签名、不结算。</p>
   </div>
 
-  <p class="banner">Read-only preview. No wallet, no program call, no Devnet deploy. Admin on devnet was still 0 lamports at 2026-10-12T00:54:43Z, so there is no explorer signature on this page. The live desk is http://127.0.0.1:8787 while npm run desk is running. This same file is the Pages preview.</p>
+  <div class="banner" role="status">
+    <p class="banner-lead" data-i18n="bannerLead">只读预览 · 真交易见本机 desk (:8787)</p>
+    <p data-i18n="bannerBody">本页不签名、不发送交易。下方数字来自本地账本快照，不是实时余额。Devnet 程序<strong>已部署</strong>于 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。<strong>1001× 已在 desk 上。</strong></p>
+    <p data-i18n="bannerSteps"><strong>三步打开交易台。</strong>本文件可放在 GitHub Pages。交易需要带演示操作者密钥的机器上运行 <code>npm run desk:devnet</code>。</p>
+    <ol>
+      <li data-i18n="step1">克隆仓库，然后 <code>cd app && npm install</code>。</li>
+      <li data-i18n="step2"><code>npm run desk:devnet</code> 会设置 <code>SCARDESK_NETWORK=devnet</code>，读取 <code>config/deployment.devnet.json</code>，并使用 <code>config/networks.json</code> 中的 RPC。<code>SCARDESK_RPC</code> 可覆盖该 URL。<code>npm run desk:localnet</code> 是另一条路径。</li>
+      <li data-i18n="step3">打开 <code>http://127.0.0.1:8787</code>。连接 Phantom、Solflare 或浏览器密钥。领水、入金，然后开仓。不要 Submit。</li>
+    </ol>
+  </div>
+
+  <aside class="proofs-panel" aria-labelledby="proof-h">
+    <h2 id="proof-h" data-i18n="proofTitle">链上证明</h2>
+    <p class="mono-id">Program · maxLeverage <strong>1001</strong> · <code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></p>
+    <div class="proof-links">
+      <a href="https://explorer.solana.com/tx/2v1X3Ecumrq98ZLzoHbpgQz3ABpgjc1ZWhJW7gzZzHcBCqg46Dh3fFvaTn1Cmztfaqjzbwaeqp7Q3trp4hovWxrW?cluster=devnet" rel="noopener" data-i18n="proofQueue">queueWrite</a>
+      <a href="https://explorer.solana.com/tx/4cM4cQMmFJnwebQ9LKEh3L1YzWoMjuHz6jYC1Dtjva7DyB12sjGDy32umSHsfukTwgD2QZ9DA5Sp3RTUaHiwEeUu?cluster=devnet" rel="noopener" data-i18n="proofScar">scarMint</a>
+      <a href="https://explorer.solana.com/tx/54Trr1rjm85dtp4aigy6n5GFE3NjHfTU1x22L9vGu3SqVrz7yC4t6ThiHXYnRdcsSVLRBr1xziCty3PhJ5LQXiD8?cluster=devnet" rel="noopener" data-i18n="proofLev">leverage1001 open</a>
+    </div>
+  </aside>
 
   <main>
-    <section class="panel" aria-labelledby="account-h">
+    <section class="panel" id="account" aria-labelledby="account-h">
       <header class="ph">
-        <h2 id="account-h">Account</h2>
-        <span class="pill">owner</span>
+        <h2 id="account-h" data-i18n="account">账户</h2>
+        <span class="pill" data-i18n="owner">所有者</span>
       </header>
       <dl class="stats">
-        <div><dt>Balance</dt><dd>1087 dUSD</dd></div>
-        <div><dt>Queued</dt><dd>0 dUSD</dd></div>
-        <div><dt>Open</dt><dd>0</dd></div>
-        <div><dt>Queue distance</dt><dd>not in line</dd></div>
+        <div><dt data-i18n="balance">余额</dt><dd>1087 dUSD</dd></div>
+        <div><dt data-i18n="queued">排队中</dt><dd>0 dUSD</dd></div>
+        <div><dt data-i18n="openCount">持仓</dt><dd>0</dd></div>
+        <div><dt data-i18n="queueDist">队列距离</dt><dd data-i18n="notInLine">未入队</dd></div>
       </dl>
-      <p class="fine">Alice · demo key · session armed. Collateral is demo stable dUSD.</p>
+      <p class="fine" data-i18n="accountFine">Alice · 演示密钥 · 会话已武装。抵押品为演示稳定币 dUSD。</p>
       <div class="row">
         <label>dUSD<input value="100" disabled></label>
-        <button type="button" disabled>Deposit</button>
-        <button type="button" disabled>Withdraw</button>
+        <button type="button" disabled data-i18n="deposit">入金</button>
+        <button type="button" disabled data-i18n="withdraw">出金</button>
       </div>
     </section>
 
-    <section class="panel" aria-labelledby="ticket-h">
+    <section class="panel" id="ticket" aria-labelledby="ticket-h">
       <header class="ph">
-        <h2 id="ticket-h">Ticket</h2>
-        <span class="pill">isolated</span>
+        <h2 id="ticket-h" data-i18n="ticket">下单</h2>
+        <span class="pill" data-i18n="isolated">隔离</span>
       </header>
       <div class="sides">
-        <button type="button" class="side on" disabled>Long</button>
-        <button type="button" class="side" disabled>Short</button>
+        <button type="button" class="side on" disabled data-i18n="long">做多</button>
+        <button type="button" class="side" disabled data-i18n="short">做空</button>
       </div>
       <div class="ticket-grid">
-        <label>Margin dUSD<input value="100" disabled></label>
-        <label>Leverage<input value="10" disabled></label>
+        <label data-i18n="margin">保证金 dUSD<input value="100" disabled></label>
+        <label data-i18n="leverage">杠杆（上限 1001）<input value="10" min="1" max="1001" disabled></label>
         <div class="preview">
-          <span>Notional</span><strong>1000 dUSD</strong>
-          <span>Liq</span><strong>live ticket</strong>
+          <span data-i18n="notional">名义</span><strong>1000 dUSD</strong>
+          <span data-i18n="liq">强平</span><strong data-i18n="liveTicket">实时票</strong>
+          <span data-i18n="maxLev">最大杠杆</span><strong>1001×</strong>
         </div>
       </div>
-      <button type="button" class="primary" disabled>Open position</button>
-      <p class="fine">One fill, full close. Buttons on this page are inert. A live open uses the same ticket on the desk.</p>
+      <button type="button" class="primary" disabled data-i18n="openPos">开仓</button>
+      <p class="fine" data-i18n="ticketFine">一笔成交，全部平仓。本页按钮无效。真开仓使用 desk 上同一张票。</p>
     </section>
 
-    <section class="panel" aria-labelledby="queue-h">
+    <section class="panel" id="queue" aria-labelledby="queue-h">
       <header class="ph">
-        <h2 id="queue-h">Queue</h2>
-        <span class="pill">3 live</span>
+        <h2 id="queue-h" data-i18n="queue">队列</h2>
+        <span class="pill" data-i18n="queueLive">3 笔进行中</span>
       </header>
-      <p class="fine">FIFO. Head is paid by the next loss before any cash reaches the LP. LP cash in this snapshot is 0, so wins are waiting.</p>
+      <p class="fine" data-i18n="queueFine">FIFO。队首由下一笔亏损兑付，然后现金才到 LP。本快照 LP 现金为 0，盈利在等待。</p>
       <div class="scroll">
         <table>
           <thead>
-            <tr><th>#</th><th>Who</th><th>Kind</th><th>Left</th><th></th></tr>
+            <tr>
+              <th>#</th>
+              <th data-i18n="thWho">谁</th>
+              <th data-i18n="thKind">类型</th>
+              <th data-i18n="thLeft">剩余</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody>
             <tr class="head">
-              <td data-label="#">4 head</td>
+              <td data-label="#" data-i18n="rowHead">4 队首</td>
               <td data-label="Who">6NC6</td>
-              <td data-label="Kind">profit</td>
+              <td data-label="Kind" data-i18n="profit">盈利</td>
               <td data-label="Left">12.067274</td>
-              <td data-label="">active · pos 0</td>
+              <td data-label="" data-i18n="activePos0">活跃 · 仓 0</td>
             </tr>
             <tr>
               <td data-label="#">5</td>
               <td data-label="Who">FyVU</td>
-              <td data-label="Kind">profit</td>
+              <td data-label="Kind" data-i18n="profit">盈利</td>
               <td data-label="Left">19.6</td>
-              <td data-label="">active · pos 0</td>
+              <td data-label="" data-i18n="activePos0">活跃 · 仓 0</td>
             </tr>
             <tr>
               <td data-label="#">6</td>
               <td data-label="Who">81Wm</td>
-              <td data-label="Kind">profit</td>
+              <td data-label="Kind" data-i18n="profit">盈利</td>
               <td data-label="Left">18.375</td>
-              <td data-label="">active · pos 1</td>
+              <td data-label="" data-i18n="activePos1">活跃 · 仓 1</td>
             </tr>
           </tbody>
         </table>
       </div>
       <dl class="stats slim">
-        <div><dt>LP cash</dt><dd>0</dd></div>
-        <div><dt>Free LP</dt><dd>0</dd></div>
-        <div><dt>Reserved fees</dt><dd>0</dd></div>
-        <div><dt>Vault</dt><dd>2499</dd></div>
+        <div><dt data-i18n="lpCash">LP 现金</dt><dd>0</dd></div>
+        <div><dt data-i18n="freeLp">空闲 LP</dt><dd>0</dd></div>
+        <div><dt data-i18n="reservedFees">预留手续费</dt><dd>0</dd></div>
+        <div><dt data-i18n="vault">金库</dt><dd>2499</dd></div>
       </dl>
     </section>
 
-    <section class="panel" aria-labelledby="pos-h">
+    <section class="panel" id="positions" aria-labelledby="pos-h">
       <header class="ph">
-        <h2 id="pos-h">Positions</h2>
+        <h2 id="pos-h" data-i18n="positions">持仓</h2>
         <span class="pill">mark 111.43189453</span>
       </header>
       <div class="scroll">
         <table class="wide">
           <thead>
             <tr>
-              <th>Id</th><th>Who</th><th>Side</th><th>Lev</th><th>Margin</th>
-              <th>Entry</th><th>uPnL</th><th>Liq</th><th>Fund</th><th>SCAR</th><th>Status</th><th></th>
+              <th>Id</th>
+              <th data-i18n="thWho">谁</th>
+              <th data-i18n="thSide">方向</th>
+              <th data-i18n="thLev">杠杆</th>
+              <th data-i18n="thMargin">保证金</th>
+              <th data-i18n="thEntry">入场</th>
+              <th>uPnL</th>
+              <th data-i18n="thLiq">强平</th>
+              <th data-i18n="thFund">资金</th>
+              <th>SCAR</th>
+              <th data-i18n="thStatus">状态</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
             <tr class="mine win">
               <td data-label="Id">0</td>
               <td data-label="Who">Alice</td>
-              <td class="side-long" data-label="Side">long</td>
+              <td class="side-long" data-label="Side" data-i18n="longLower">做多</td>
               <td data-label="Lev">10×</td>
               <td data-label="Margin">100</td>
               <td data-label="Entry">100</td>
               <td class="up" data-label="uPnL">+100</td>
               <td data-label="Liq">95</td>
-              <td data-label="Fund">balance</td>
+              <td data-label="Fund" data-i18n="fundBalance">余额</td>
               <td data-label="SCAR">—</td>
-              <td data-label="Status">closed</td>
+              <td data-label="Status" data-i18n="closed">已平</td>
               <td data-label="">—</td>
             </tr>
             <tr class="mine loss">
               <td data-label="Id">1</td>
               <td data-label="Who">Alice</td>
-              <td class="side-long" data-label="Side">long</td>
+              <td class="side-long" data-label="Side" data-i18n="longLower">做多</td>
               <td data-label="Lev">1000×</td>
               <td data-label="Margin">10</td>
               <td data-label="Entry">100</td>
               <td class="dn" data-label="uPnL">-6</td>
               <td data-label="Liq">99.95</td>
-              <td data-label="Fund">balance</td>
+              <td data-label="Fund" data-i18n="fundBalance">余额</td>
               <td data-label="SCAR">1000</td>
-              <td data-label="Status">liquidated</td>
+              <td data-label="Status" data-i18n="liquidated">已清算</td>
               <td data-label="">—</td>
             </tr>
           </tbody>
         </table>
       </div>
-      <p class="fine">Red bar is a positive settle. Ash bar is the 1000× liquidation, which minted SCAR. Alice has no open position in this snapshot. Older rows stay on the live desk.</p>
+      <p class="fine" data-i18n="posFine">红条为正结算。灰条为高杠杆清算并铸造 SCAR。Devnet 上限现为 1001×。本快照 Alice 无未平仓。更早行留在 live desk。</p>
     </section>
 
-    <section class="panel" aria-labelledby="scar-h">
+    <section class="panel" id="scar" aria-labelledby="scar-h">
       <header class="ph">
         <h2 id="scar-h">SCAR</h2>
-        <span class="pill">supply 16477.2726</span>
+        <span class="pill" data-i18n="supply">供应 16477.2726</span>
       </header>
       <dl class="stats">
-        <div><dt>Free</dt><dd>1000</dd></div>
-        <div><dt>Staked</dt><dd>0</dd></div>
-        <div><dt>Pending</dt><dd>0 dUSD</dd></div>
-        <div><dt>Minted to you</dt><dd>1000</dd></div>
+        <div><dt data-i18n="free">空闲</dt><dd>1000</dd></div>
+        <div><dt data-i18n="staked">已质押</dt><dd>0</dd></div>
+        <div><dt data-i18n="pending">待领</dt><dd>0 dUSD</dd></div>
+        <div><dt data-i18n="mintedYou">已铸给你</dt><dd>1000</dd></div>
       </dl>
-      <p class="fine">Alice's free SCAR is the 1000× liquidation. The token does not transfer. This page cannot stake or claim.</p>
+      <p class="fine" data-i18n="scarFine">Alice 的空闲 SCAR 来自 1000× 清算。代币不可转账。本页不能质押或领取。</p>
     </section>
 
-    <section class="panel" aria-labelledby="agent-h">
+    <section class="panel" id="agent" aria-labelledby="agent-h">
       <header class="ph">
-        <h2 id="agent-h">Agent log</h2>
-        <span class="pill">not live</span>
+        <h2 id="agent-h" data-i18n="agentLog">代理日志</h2>
+        <span class="pill" data-i18n="notLive">非实时</span>
       </header>
-      <p class="fine">The live log is on the desk. This list is the shape of the loop, not a new signature.</p>
+      <p class="fine" data-i18n="agentFine">实时日志在 desk 上。本列表是循环形态，不是新签名。</p>
       <ol class="log">
-        <li><time>frozen</time><span class="tool">positions.close</span><span>Loss mints SCAR, then pays the queue head.</span></li>
-        <li><time>frozen</time><span class="tool">positions.close</span><span>A win the LP cannot fund writes a FIFO node.</span></li>
-        <li class="bad"><time>frozen</time><span class="tool">withdraw</span><span>Session key is rejected. Balance stays put.</span></li>
+        <li><time data-i18n="frozen">冻结</time><span class="tool">positions.close</span><span data-i18n="log1">亏损铸造 SCAR，然后兑付队首。</span></li>
+        <li><time data-i18n="frozen">冻结</time><span class="tool">positions.close</span><span data-i18n="log2">LP 无法兑付的盈利写入 FIFO 节点。</span></li>
+        <li class="bad"><time data-i18n="frozen">冻结</time><span class="tool">withdraw</span><span data-i18n="log3">会话密钥被拒绝。余额不动。</span></li>
       </ol>
     </section>
   </main>
 
   <footer>
-    <p>Scardesk is an independent experiment. Not affiliated with papertrade.xyz.</p>
-    <p>Demo stable on localnet. Same settlement rules. Not mainnet funds. Public program not deployed.</p>
-    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
-    <p class="addrs">Snapshot 2026-10-12T00:54:43Z · local validator was http://127.0.0.1:8899 · devnet admin FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U had 0 lamports · no explorer link is invented here.</p>
+    <p data-i18n="footer1">Scardesk 是独立实验。与 papertrade.xyz 无关。</p>
+    <p data-i18n="footer2">演示稳定币。相同结算规则。非主网资金。Devnet 程序 E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b 已部署 · maxLeverage 1001。</p>
+    <p class="zh-only" data-i18n="footerZh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
+    <p class="addrs">Program Devnet E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b · maxLeverage 1001 · upgrade authority FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U · local blotter snapshot · live desk http://127.0.0.1:8787</p>
   </footer>
+
+  <script>
+(function () {
+  var KEY = 'scardesk.lang';
+  var I18N = {
+    zh: {
+      title: 'Scardesk — 只读预览',
+      eyebrow: 'SOL/USD 交易台',
+      mark: '标记价',
+      pyth: 'pyth · 暂定',
+      redUp: '红 = 涨',
+      pxNote: '冻结读数。Devnet 上赞助的 Pyth SOL/USD，打上时钟戳后写入本机 desk。Hermes 仍需 PYTH_API_KEY。灰为跌。',
+      walletsAria: '钱包（本页禁用）',
+      browserKey: '浏览器密钥',
+      actorsAria: '谁的交易台',
+      aliceSession: 'Alice 会话',
+      linkState: '只读 · Devnet 程序已上线 · 本页不签名',
+      whoFine: '本地账本快照。Devnet 程序 E7kH2K4Y…WXF4b 已部署；1001× 已验证。真交易在本机连接钱包。',
+      riskEn: '<strong>合成永续 · 亏损注资 LP · FIFO 兑付。</strong>仅隔离保证金。不可部分平仓、不可追加。1001× 下几个基点即可清算全部保证金。本页是该交易台的画面，不发送任何交易。',
+      riskZh: '高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。本页只读，不签名、不结算。',
+      bannerLead: '只读预览 · 真交易见本机 desk (:8787)',
+      bannerBody: '本页不签名、不发送交易。下方数字来自本地账本快照，不是实时余额。本机交易台在 <a href="/">/</a>。Devnet 程序 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。<strong>1001× 已在 desk 上。</strong>',
+      bannerSteps: '<strong>三步打开交易台。</strong>本机交易台在 <a href="/">/</a>。克隆后也可 <code>npm run desk:devnet</code>。',
+      step1: '克隆仓库，然后 <code>cd app && npm install</code>。',
+      step2: '<code>npm run desk:devnet</code> 会设置 <code>SCARDESK_NETWORK=devnet</code>，读取 <code>config/deployment.devnet.json</code>，并使用 <code>config/networks.json</code> 中的 RPC。<code>SCARDESK_RPC</code> 可覆盖该 URL。<code>npm run desk:localnet</code> 是另一条路径。',
+      step3: '打开 <code>http://127.0.0.1:8787</code>。连接 Phantom、Solflare 或浏览器密钥。领水、入金，然后开仓。不要 Submit。',
+      proofTitle: '链上证明',
+      proofQueue: 'queueWrite',
+      proofScar: 'scarMint',
+      proofLev: 'leverage1001 open',
+      account: '账户',
+      owner: '所有者',
+      balance: '余额',
+      queued: '排队中',
+      openCount: '持仓',
+      queueDist: '队列距离',
+      notInLine: '未入队',
+      accountFine: 'Alice · 演示密钥 · 会话已武装。抵押品为演示稳定币 dUSD。',
+      deposit: '入金',
+      withdraw: '出金',
+      ticket: '下单',
+      isolated: '隔离',
+      long: '做多',
+      short: '做空',
+      margin: '保证金 dUSD',
+      leverage: '杠杆（上限 1001）',
+      notional: '名义',
+      liq: '强平',
+      liveTicket: '实时票',
+      maxLev: '最大杠杆',
+      openPos: '开仓',
+      ticketFine: '一笔成交，全部平仓。本页按钮无效。真开仓使用 desk 上同一张票。',
+      queue: '队列',
+      queueLive: '3 笔进行中',
+      queueFine: 'FIFO。队首由下一笔亏损兑付，然后现金才到 LP。本快照 LP 现金为 0，盈利在等待。',
+      thWho: '谁',
+      thKind: '类型',
+      thLeft: '剩余',
+      rowHead: '4 队首',
+      profit: '盈利',
+      activePos0: '活跃 · 仓 0',
+      activePos1: '活跃 · 仓 1',
+      lpCash: 'LP 现金',
+      freeLp: '空闲 LP',
+      reservedFees: '预留手续费',
+      vault: '金库',
+      positions: '持仓',
+      thSide: '方向',
+      thLev: '杠杆',
+      thMargin: '保证金',
+      thEntry: '入场',
+      thLiq: '强平',
+      thFund: '资金',
+      thStatus: '状态',
+      longLower: '做多',
+      fundBalance: '余额',
+      closed: '已平',
+      liquidated: '已清算',
+      posFine: '红条为正结算。灰条为高杠杆清算并铸造 SCAR。Devnet 上限现为 1001×。本快照 Alice 无未平仓。更早行留在 live desk。',
+      supply: '供应 16477.2726',
+      free: '空闲',
+      staked: '已质押',
+      pending: '待领',
+      mintedYou: '已铸给你',
+      scarFine: 'Alice 的空闲 SCAR 来自 1000× 清算。代币不可转账。本页不能质押或领取。',
+      agentLog: '代理日志',
+      notLive: '非实时',
+      agentFine: '实时日志在 desk 上。本列表是循环形态，不是新签名。',
+      frozen: '冻结',
+      log1: '亏损铸造 SCAR，然后兑付队首。',
+      log2: 'LP 无法兑付的盈利写入 FIFO 节点。',
+      log3: '会话密钥被拒绝。余额不动。',
+      footer1: 'Scardesk 是独立实验。与 papertrade.xyz 无关。',
+      footer2: '演示稳定币。相同结算规则。非主网资金。Devnet 程序 E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b 已部署 · maxLeverage 1001。',
+      footerZh: '高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。'
+    },
+    en: {
+      title: 'Scardesk — read-only preview',
+      eyebrow: 'SOL/USD desk',
+      mark: 'Mark',
+      pyth: 'pyth · provisional',
+      redUp: 'red = up',
+      pxNote: 'Frozen read. Sponsored Pyth SOL/USD on devnet, clock-stamped onto the local desk. Hermes still needs PYTH_API_KEY. Ash is down.',
+      walletsAria: 'Wallets, disabled on this page',
+      browserKey: 'Browser key',
+      actorsAria: 'Whose desk',
+      aliceSession: 'Alice session',
+      linkState: 'Read-only · Devnet program live · nothing on this page signs',
+      whoFine: 'Blotter snapshot from local ledger. Devnet program E7kH2K4Y…WXF4b is deployed; 1001× proven. Live desk connects a wallet locally.',
+      riskEn: '<strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. At 1001× a few basis points liquidate the whole margin. This page is a picture of that desk. It does not send a transaction.',
+      riskZh: 'Mechanism demo of high-leverage synthetic derivatives; not advice; principal at risk; queue payouts depend on later inflow. This page is read-only — no signatures, no settlement.',
+      bannerLead: 'Read-only preview · live desk is local (:8787)',
+      bannerBody: 'Nothing here signs or sends a transaction. The figures below are a local-ledger snapshot, not a live balance. The trading desk on this host is <a href="/">/</a>. Devnet program <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>. <strong>1001× is on the desk.</strong>',
+      bannerSteps: '<strong>Clone and open the trading desk in three steps.</strong> The trading desk on this host is <a href="/">/</a>. Or run <code>npm run desk:devnet</code> after clone.',
+      step1: 'Clone the repo, then <code>cd app && npm install</code>.',
+      step2: '<code>npm run desk:devnet</code> sets <code>SCARDESK_NETWORK=devnet</code>, reads <code>config/deployment.devnet.json</code>, and uses the RPC in <code>config/networks.json</code>. <code>SCARDESK_RPC</code> overrides that URL. <code>npm run desk:localnet</code> is the other way.',
+      step3: 'Open <code>http://127.0.0.1:8787</code>. Connect Phantom, Solflare, or Browser key. Faucet, deposit, then open. Do not Submit.',
+      proofTitle: 'On-chain proof',
+      proofQueue: 'queueWrite',
+      proofScar: 'scarMint',
+      proofLev: 'leverage1001 open',
+      account: 'Account',
+      owner: 'owner',
+      balance: 'Balance',
+      queued: 'Queued',
+      openCount: 'Open',
+      queueDist: 'Queue distance',
+      notInLine: 'not in line',
+      accountFine: 'Alice · demo key · session armed. Collateral is demo stable dUSD.',
+      deposit: 'Deposit',
+      withdraw: 'Withdraw',
+      ticket: 'Ticket',
+      isolated: 'isolated',
+      long: 'Long',
+      short: 'Short',
+      margin: 'Margin dUSD',
+      leverage: 'Leverage (max 1001)',
+      notional: 'Notional',
+      liq: 'Liq',
+      liveTicket: 'live ticket',
+      maxLev: 'Max lev',
+      openPos: 'Open position',
+      ticketFine: 'One fill, full close. Buttons on this page are inert. A live open uses the same ticket on the desk.',
+      queue: 'Queue',
+      queueLive: '3 live',
+      queueFine: 'FIFO. Head is paid by the next loss before any cash reaches the LP. LP cash in this snapshot is 0, so wins are waiting.',
+      thWho: 'Who',
+      thKind: 'Kind',
+      thLeft: 'Left',
+      rowHead: '4 head',
+      profit: 'profit',
+      activePos0: 'active · pos 0',
+      activePos1: 'active · pos 1',
+      lpCash: 'LP cash',
+      freeLp: 'Free LP',
+      reservedFees: 'Reserved fees',
+      vault: 'Vault',
+      positions: 'Positions',
+      thSide: 'Side',
+      thLev: 'Lev',
+      thMargin: 'Margin',
+      thEntry: 'Entry',
+      thLiq: 'Liq',
+      thFund: 'Fund',
+      thStatus: 'Status',
+      longLower: 'long',
+      fundBalance: 'balance',
+      closed: 'closed',
+      liquidated: 'liquidated',
+      posFine: 'Red bar is a positive settle. Ash bar is a high-leverage liquidation, which minted SCAR. Devnet max is now 1001×. Alice has no open position in this snapshot. Older rows stay on the live desk.',
+      supply: 'supply 16477.2726',
+      free: 'Free',
+      staked: 'Staked',
+      pending: 'Pending',
+      mintedYou: 'Minted to you',
+      scarFine: "Alice's free SCAR is the 1000× liquidation. The token does not transfer. This page cannot stake or claim.",
+      agentLog: 'Agent log',
+      notLive: 'not live',
+      agentFine: 'The live log is on the desk. This list is the shape of the loop, not a new signature.',
+      frozen: 'frozen',
+      log1: 'Loss mints SCAR, then pays the queue head.',
+      log2: 'A win the LP cannot fund writes a FIFO node.',
+      log3: 'Session key is rejected. Balance stays put.',
+      footer1: 'Scardesk is an independent experiment. Not affiliated with papertrade.xyz.',
+      footer2: 'Demo stable. Same settlement rules. Not mainnet funds. Devnet program E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b deployed · maxLeverage 1001.',
+      footerZh: 'Mechanism demo of high-leverage synthetic derivatives; not advice; principal at risk; queue payouts depend on later inflow.'
+    }
+  };
+
+  function apply(lang) {
+    var map = I18N[lang] || I18N.zh;
+    document.documentElement.lang = lang === 'en' ? 'en' : 'zh-Hans';
+    document.title = map.title;
+    document.querySelectorAll('[data-i18n]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n');
+      if (!map[key]) return;
+      var tag = el.tagName;
+      if (tag === 'LABEL') {
+        var input = el.querySelector('input, select');
+        if (input) {
+          Array.prototype.slice.call(el.childNodes).forEach(function (n) {
+            if (n.nodeType === 3) el.removeChild(n);
+          });
+          el.insertBefore(document.createTextNode(map[key]), input);
+        } else {
+          el.textContent = map[key];
+        }
+      } else if (map[key].indexOf('<') !== -1) {
+        el.innerHTML = map[key];
+      } else {
+        el.textContent = map[key];
+      }
+    });
+    document.querySelectorAll('[data-i18n-aria]').forEach(function (el) {
+      var key = el.getAttribute('data-i18n-aria');
+      if (map[key]) el.setAttribute('aria-label', map[key]);
+    });
+    var zhBtn = document.getElementById('lang-zh');
+    var enBtn = document.getElementById('lang-en');
+    if (zhBtn && enBtn) {
+      zhBtn.classList.toggle('on', lang === 'zh');
+      enBtn.classList.toggle('on', lang === 'en');
+      zhBtn.setAttribute('aria-pressed', lang === 'zh' ? 'true' : 'false');
+      enBtn.setAttribute('aria-pressed', lang === 'en' ? 'true' : 'false');
+    }
+    try { localStorage.setItem(KEY, lang); } catch (e) {}
+  }
+
+  var saved = 'zh';
+  try {
+    var v = localStorage.getItem(KEY);
+    if (v === 'en' || v === 'zh') saved = v;
+  } catch (e) {}
+  apply(saved);
+
+  document.getElementById('lang-zh').addEventListener('click', function () { apply('zh'); });
+  document.getElementById('lang-en').addEventListener('click', function () { apply('en'); });
+})();
+  </script>
 </body>
 </html>

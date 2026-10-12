@@ -22,10 +22,10 @@ MD
 cd "$tmp"
 git init -b main
 git add .
-git -c user.email="92594860+er-s-an@users.noreply.github.com" -c user.name="er-s-an" commit -m "Pages: in-page permissionless dUSD faucet (IX 17)
+git -c user.email="92594860+er-s-an@users.noreply.github.com" -c user.name="er-s-an" commit -m "Pages: sync trade UI from docs (no Submit)
 
-Architecture A: trade.html prepare+send + demo_faucet (wallet signs, 1000 dUSD,
-60s cooldown). No admin keys. Fee SOL via faucet.solana.com. No Submit."
+Browser prepare+send + demo faucet. Bundle must stay free of Node __dirname.
+Fee SOL via faucet.solana.com. No Submit."
 git remote add origin "https://github.com/er-s-an/scardesk.git"
 git push -u origin main --force
 echo "Pushed. Check https://er-s-an.github.io/scardesk/trade.html"

@@ -1,73 +1,134 @@
 {
-  "ok": false,
-  "at": "2026-10-12T00:14:45Z",
+  "ok": true,
+  "at": "2026-10-12T04:37:55.033Z",
   "submitted": false,
   "network": "devnet",
   "rpc": "https://solana-devnet.api.onfinality.io/public",
   "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
   "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
   "admin": "FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U",
-  "adminLamports": 0,
-  "programBytes": 215584,
-  "deployLamports": 3200000000,
-  "rent": {
-    "programDataSol": 1.50166872,
-    "bufferSol": 1.50166872,
-    "programAccountSol": 0.00114144,
-    "note": "solana rent 215629 and solana rent 36 on the local validator. Upgradeable deploy holds program data and a buffer at the same time. CLI 1.18 program deploy does not expose a non-upgradeable BPF loader v2 path."
-  },
-  "deployed": false,
-  "signatures": {},
-  "explorer": {},
+  "deployed": true,
+  "deploySlot": 510149272,
+  "resumed": true,
+  "treasuryThawedInTx": true,
   "price": {
     "ok": true,
-    "source": "pyth-account",
+    "source": "pyth-account-pro",
     "cluster": "devnet",
-    "account": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+    "account": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
     "rpc": "https://solana-devnet.api.onfinality.io/public",
     "feed": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
-    "price": "11110344252",
+    "price": "11221792485",
     "expo": -8,
-    "conf": "4984792",
-    "publishTime": "1791763979",
-    "hermes": 401,
-    "pythBenchmarks": 401,
-    "note": "Sponsored Pyth SOL/USD account, shard 0 of pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT, read with getAccountInfo. No PYTH_API_KEY. This is not a Hermes pull. The checked-in fixture at 100 remains the fallback and is provisional."
+    "conf": "3855296",
+    "publishTime": "1791779858",
+    "attempts": [
+      {
+        "source": "hermes",
+        "status": 401,
+        "error": "unauthorized"
+      },
+      {
+        "source": "pyth-benchmarks",
+        "status": 401,
+        "error": "unauthorized"
+      },
+      {
+        "source": "pyth-account",
+        "cluster": "devnet",
+        "account": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+        "status": 429,
+        "error": "Too Many Requests, Please apply an OnFinality API key or contact us to receive a higher rate limit"
+      },
+      {
+        "source": "pyth-account-pro",
+        "cluster": "devnet",
+        "account": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+        "status": 200
+      }
+    ],
+    "note": "Sponsored Pyth price-feed account on devnet. Hermes still returns 401 without PYTH_API_KEY."
   },
-  "keys": "No HELIUS, QUICKNODE, or PYTH_API_KEY in the environment. Nothing was written into config.",
-  "funding": [
+  "signatures": {
+    "initialize": "5zwUQX4yp4qtNEFCwJyv41AxxHmtkLeMmzb5M7TLAiZYkYL8dyNRPYf7CDHjH5ZgveJykxt6o9RkzQNBacLDnyrk",
+    "queueWrite": "2v1X3Ecumrq98ZLzoHbpgQz3ABpgjc1ZWhJW7gzZzHcBCqg46Dh3fFvaTn1Cmztfaqjzbwaeqp7Q3trp4hovWxrW",
+    "scarMint": "4cM4cQMmFJnwebQ9LKEh3L1YzWoMjuHz6jYC1Dtjva7DyB12sjGDy32umSHsfukTwgD2QZ9DA5Sp3RTUaHiwEeUu",
+    "sessionReject": "2VDV5i9Zik62p1RhvPCuoVkYQvRtZzWyybXezymzmFD7mjYHbFsQpyTS7om7agVLCUrV4MyptRkvBrefvWCUk8mJ",
+    "setMaxLeverage": "4pfphmLxcviboE3erQmvvHdnVNCrYHWhwyUqdXSjizsALLFMcvcpQcUQZhWfovcHqw2wh9Sni3g8yvoFjapErS7J",
+    "leverage1001": "54Trr1rjm85dtp4aigy6n5GFE3NjHfTU1x22L9vGu3SqVrz7yC4t6ThiHXYnRdcsSVLRBr1xziCty3PhJ5LQXiD8"
+  },
+  "explorer": {
+    "program": "https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet",
+    "initialize": "https://explorer.solana.com/tx/5zwUQX4yp4qtNEFCwJyv41AxxHmtkLeMmzb5M7TLAiZYkYL8dyNRPYf7CDHjH5ZgveJykxt6o9RkzQNBacLDnyrk?cluster=devnet",
+    "queueWrite": "https://explorer.solana.com/tx/2v1X3Ecumrq98ZLzoHbpgQz3ABpgjc1ZWhJW7gzZzHcBCqg46Dh3fFvaTn1Cmztfaqjzbwaeqp7Q3trp4hovWxrW?cluster=devnet",
+    "scarMint": "https://explorer.solana.com/tx/4cM4cQMmFJnwebQ9LKEh3L1YzWoMjuHz6jYC1Dtjva7DyB12sjGDy32umSHsfukTwgD2QZ9DA5Sp3RTUaHiwEeUu?cluster=devnet",
+    "scarMintAccount": "https://explorer.solana.com/address/3ULF37kFcSqYYtJcRSqnFLixwz1bju7BWd2NPqzNYbGs?cluster=devnet",
+    "sessionReject": "https://explorer.solana.com/tx/2VDV5i9Zik62p1RhvPCuoVkYQvRtZzWyybXezymzmFD7mjYHbFsQpyTS7om7agVLCUrV4MyptRkvBrefvWCUk8mJ?cluster=devnet",
+    "setMaxLeverage": "https://explorer.solana.com/tx/4pfphmLxcviboE3erQmvvHdnVNCrYHWhwyUqdXSjizsALLFMcvcpQcUQZhWfovcHqw2wh9Sni3g8yvoFjapErS7J?cluster=devnet",
+    "leverage1001": "https://explorer.solana.com/tx/54Trr1rjm85dtp4aigy6n5GFE3NjHfTU1x22L9vGu3SqVrz7yC4t6ThiHXYnRdcsSVLRBr1xziCty3PhJ5LQXiD8?cluster=devnet"
+  },
+  "addresses": {
+    "program": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+    "desk": "7z22VzGm4uFncPvY2DKHKYbUESEhb6bP8AfoRt3k3WPP",
+    "dusdMint": "4Ar1dho99UN8HXh5WQEgfVFwikE2kdQL8kGtFq6mFjpJ",
+    "scarMint": "3ULF37kFcSqYYtJcRSqnFLixwz1bju7BWd2NPqzNYbGs",
+    "vault": "6kCbzQRB8qyhPnctrKjpWZmn2CmtvbC4WKbPRUocKLRP",
+    "treasury": "BNRKAuPgosZpfq78ULf2NMtxsbo5dEU4y6iK6DhNL64L",
+    "oracle": "GvgnPF5Dh5ZcSMWwgTyUrBDdJ8BsTBpu9oM5TzkMXfhG",
+    "admin": "FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U"
+  },
+  "events": [
     {
-      "source": "api.devnet.solana.com",
-      "result": "Unreachable. This sandbox resolves the name to 198.18.0.1. The public A record 208.115.212.49 still ends in TLS EOF. Not used as a deploy RPC."
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "10560000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=10560000000;expo=-8"
     },
     {
-      "source": "OnFinality devnet",
-      "result": "Genesis matches. getBalance of the admin is 0. requestAirdrop returns Invalid request."
+      "name": "treasury_thaw",
+      "fields": {
+        "account": "BNRKAuPgosZpfq78ULf2NMtxsbo5dEU4y6iK6DhNL64L"
+      },
+      "line": "Program log: evt=treasury_thaw;account=BNRKAuPgosZpfq78ULf2NMtxsbo5dEU4y6iK6DhNL64L"
     },
     {
-      "source": "api.testnet.solana.com",
-      "result": "RPC answers. requestAirdrop for fresh keys D3shg96xELrK3vsyUnFRQi48KvgryaBByEoPPp2kRWs7, CeuhppDE8oZMmR4ZqijAo3K8Qi1jat1tmra8dqbC4kP, and 7hJVuNoQyBGM8pey4BsBhQX8ra48A7pKmHHm3psnhtGH returned 429: airdrop limit or faucet dry for this IP."
+      "name": "scar_minted",
+      "fields": {
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF",
+        "amount": "8000000000",
+        "pos": "0",
+        "loss": "80000000"
+      },
+      "line": "Program log: evt=scar_minted;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF;amount=8000000000;pos=0;loss=80000000"
     },
     {
-      "source": "faucet.solana.com",
-      "result": "Turnstile verification failed. No drip. Not retried."
+      "name": "queue_pay",
+      "fields": {
+        "index": "0",
+        "amount": "80000000",
+        "user": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+      },
+      "line": "Program log: evt=queue_pay;index=0;amount=80000000;user=CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
     },
     {
-      "source": "faucet.quicknode.com/solana/devnet",
-      "result": "Wallet filled, Solana Devnet selected, Continue stayed on the same form. No drip."
-    },
-    {
-      "source": "sol-devnet-fee-relay.michae2xl.workers.dev",
-      "result": "HTTP 500, provider blocked. Would have been about 0.011 SOL."
-    },
-    {
-      "source": "other public RPCs",
-      "result": "Tatum paid or Invalid request. Omniatech HTTP 521. GenesysGo not JSON. dRPC not on the free plan. Ankr needs a key. publicnode, extrnode, and blastapi did not answer a devnet airdrop. Alchemy demo 429. Helius public key 401. QuickNode and Syndica demo hosts TLS EOF."
-    },
-    {
-      "source": "fresh deployer",
-      "result": "7f6Tk3xuV1YarYsX5kieRaaka8XahCR5xMUHfEU8YMDi was created and not funded. No transfer to the admin."
+      "name": "settle",
+      "fields": {
+        "pos": "0",
+        "status": "1",
+        "pnl": "-80000000",
+        "fee": "0",
+        "paid": "0",
+        "queued": "0",
+        "scar": "8000000000",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=0;status=1;pnl=-80000000;fee=0;paid=0;queued=0;scar=8000000000;src=1"
     }
   ],
-  "error": "Not enough SOL to deploy. Admin balance is 0 lamports on OnFinality devnet. No program transaction was sent. ok stays false. Not submitted."
+  "note": "Resumed after upgrade: mint_scar thaw_account then mint_to. Max leverage raised to 1001 via set_max_leverage (IX 16). 1001\u00d7 open proven. Not submitted.",
+  "maxLeverage": 1001,
+  "leverageAt": "2026-10-12T04:53:11.000Z"
 }

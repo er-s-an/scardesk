@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Scardesk — SOL/USD</title>
+  <title>Scardesk — SOL/BTC/ETH</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
@@ -17,8 +17,13 @@
     <div class="brand">
       <span class="mark" aria-hidden="true"></span>
       <div>
-        <p class="eyebrow">SOL/USD desk</p>
+        <p class="eyebrow" id="market-eyebrow">SOL/USD desk</p>
         <h1>Scardesk</h1>
+        <nav class="markets" id="markets" role="tablist" aria-label="Market">
+          <button type="button" role="tab" data-market="SOL/USD" class="on" aria-selected="true">SOL</button>
+          <button type="button" role="tab" data-market="BTC/USD" aria-selected="false">BTC</button>
+          <button type="button" role="tab" data-market="ETH/USD" aria-selected="false">ETH</button>
+        </nav>
       </div>
     </div>
     <div class="quote" id="quote">
@@ -49,11 +54,39 @@
   </header>
 
   <div class="risk" role="note">
-    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. A loss mints SCAR and pays the queue, then the LP. A win the LP cannot cover waits in line. At 1000× a few basis points liquidate the whole margin.</p>
+    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. A loss mints SCAR and pays the queue, then the LP. A win the LP cannot cover waits in line. At 1001× a few basis points liquidate the whole margin.</p>
     <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
   </div>
 
   <p id="banner" class="banner" hidden></p>
+  <p id="next-step" class="next-step">Next: connect a wallet, faucet dUSD, deposit, then open.</p>
+
+
+    <section id="chart" class="panel" aria-labelledby="chart-h">
+      <header class="ph chart-ph">
+        <div class="chart-title">
+          <h2 id="chart-h">Chart</h2>
+          <span id="live-pill" class="pill live" title="Mark feed">LIVE</span>
+        </div>
+        <div class="chart-controls">
+          <nav class="timeframes" id="timeframes" role="tablist" aria-label="Timeframe">
+            <button type="button" role="tab" data-tf="Tick" class="on" aria-selected="true">Tick</button>
+            <button type="button" role="tab" data-tf="1m" aria-selected="false">1m</button>
+            <button type="button" role="tab" data-tf="5m" aria-selected="false">5m</button>
+            <button type="button" role="tab" data-tf="15m" aria-selected="false">15m</button>
+            <button type="button" role="tab" data-tf="1h" aria-selected="false">1h</button>
+            <button type="button" role="tab" data-tf="4h" aria-selected="false">4h</button>
+            <button type="button" role="tab" data-tf="1d" aria-selected="false">1d</button>
+          </nav>
+          <label class="ema-toggle"><input type="checkbox" id="ema-toggle"> EMA21</label>
+          <span id="chart-meta" class="pill">Tick</span>
+        </div>
+      </header>
+      <div class="chart-wrap">
+        <canvas id="mark-chart" role="img" aria-label="Mark Tick step chart or candlesticks by timeframe"></canvas>
+      </div>
+      <p class="fine" id="chart-note">Default Tick (step + shade). From 15m: candlesticks. Red is up, ash is down. EMA is optional and subtle — not a papertrade parity claim.</p>
+    </section>
 
   <main>
     <section id="account" class="panel" aria-labelledby="account-h">
@@ -82,13 +115,12 @@
         <button type="button" id="btn-clear" class="ghost">Clear session</button>
         <button type="button" id="btn-as" class="ghost">Trade as session</button>
       </div>
-      <p class="fine">Faucet mints demo stable into the wallet, then you deposit. It does not edit a position or mint SCAR.</p>
+      <p class="fine" id="wallet-hold">Faucet mints demo stable into the wallet, then you deposit. It does not edit a position or mint SCAR.</p>
     </section>
-
     <section id="ticket" class="panel" aria-labelledby="ticket-h">
       <header class="ph">
         <h2 id="ticket-h">Ticket</h2>
-        <span class="pill">isolated</span>
+        <span class="pill" id="ticket-market">SOL/USD · isolated</span>
       </header>
       <div class="sides" role="group" aria-label="Side">
         <button type="button" id="side-long" class="side on" data-side="long">Long</button>
@@ -99,10 +131,10 @@
           <input id="margin" inputmode="decimal" value="100">
         </label>
         <label>Leverage
-          <input id="lev" type="number" min="1" max="1000" value="10">
+          <input id="lev" type="number" min="1" max="1001" value="10">
         </label>
         <label class="span">Leverage rail
-          <input id="lev-range" type="range" min="1" max="1000" value="10">
+          <input id="lev-range" type="range" min="1" max="1001" value="10">
         </label>
         <label>Fund from
           <select id="fund">
@@ -151,7 +183,7 @@
         <table class="wide">
           <thead>
             <tr>
-              <th>Id</th><th>Who</th><th>Side</th><th>Lev</th><th>Margin</th>
+              <th>Id</th><th>Mkt</th><th>Who</th><th>Side</th><th>Lev</th><th>Margin</th>
               <th>Entry</th><th>uPnL</th><th>Liq</th><th>Fund</th><th>SCAR</th><th>Status</th><th></th>
             </tr>
           </thead>
@@ -220,6 +252,7 @@
     <p id="addrs" class="addrs"></p>
   </footer>
   <script src="/wallet.js"></script>
+  <script src="/chart.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>

@@ -55,10 +55,17 @@
       faucetGap: "领水为链上无权限 demo faucet：连接钱包后点「领水 1000 dUSD」，签名即铸造。60 秒冷却。Fee SOL 请用 faucet.solana.com。",
       feeSolHint: "Devnet SOL 请用 https://faucet.solana.com （本 RPC 拒绝 requestAirdrop）。",
       nextConnect: "下一步：连接 Phantom / Solflare / 浏览器密钥",
+      mobileHint: "手机：点 Phantom/Solflare 会尝试打开钱包 App；也可在钱包内置浏览器打开本页，或用「浏览器密钥」。",
       nextFaucet: "下一步：点「领水 1000 dUSD」，签名后入金",
       nextDeposit: "下一步：入金 dUSD 到 desk",
       nextOpen: "下一步：开仓 SOL/USD",
       idle: "未连接 · Devnet",
+      needSol: "Devnet SOL 不足（需 ≥0.02）。请先打开 faucet.solana.com 领 Fee SOL，再连接。",
+      wrongNet: "钱包似乎在主网/非 Devnet。请在 Phantom/Solflare 切换到 Devnet 后再试。",
+      rpcBusy: "RPC 忙（429），等几秒再试。未新签。",
+      openFaucet: "打开 SOL 水龙头",
+      mobileWallet: "手机请用钱包内置浏览器打开本页，或安装 Phantom / Solflare。",
+      browserKeyHint: "无扩展时可用「浏览器密钥」（本机生成，仅 Devnet 演示）。",
       loading: "读取 desk…",
       notOnChain: "BTC/ETH 标记可读；开仓仅 SOL/USD 上链。",
     },
@@ -93,10 +100,17 @@
       faucetGap: "On-chain permissionless demo faucet: connect, click Faucet 1000 dUSD, sign. 60s cooldown. Fee SOL from faucet.solana.com.",
       feeSolHint: "Get Devnet SOL from https://faucet.solana.com (this RPC refuses requestAirdrop).",
       nextConnect: "Next: connect Phantom / Solflare / Browser key",
+      mobileHint: "Phone: Phantom/Solflare opens the wallet app when possible. Or open this page in the in-wallet browser, or use Browser key.",
       nextFaucet: "Next: click Faucet 1000 dUSD, sign, then deposit",
       nextDeposit: "Next: deposit dUSD onto the desk",
       nextOpen: "Next: open a SOL/USD position",
       idle: "Not connected · Devnet",
+      needSol: "Not enough Devnet SOL (≥0.02 needed). Open faucet.solana.com for fee SOL, then reconnect.",
+      wrongNet: "Wallet looks like mainnet / not Devnet. Switch Phantom/Solflare to Devnet and retry.",
+      rpcBusy: "RPC busy (429). Wait a few seconds, then retry. Nothing new was signed.",
+      openFaucet: "Open SOL faucet",
+      mobileWallet: "On mobile, open this page inside your wallet browser, or install Phantom / Solflare.",
+      browserKeyHint: "No extension? Use Browser key (local Devnet demo key).",
       loading: "Reading desk…",
       notOnChain: "BTC/ETH marks are readable; only SOL/USD opens settle on-chain.",
     },
@@ -169,15 +183,22 @@
   function explain(err, logs) {
     const msg = (err && err.message) || String(err || "failed");
     const blob = [msg].concat(logs || []).join("\n");
-    if (/Phantom is not installed/i.test(blob)) return t("en") && lang === "zh"
-      ? "未安装 Phantom。请用 Solflare 或浏览器密钥。"
-      : "Phantom is not installed. Use Solflare, or Browser key.";
+    if (/Opening Phantom app/i.test(blob)) return lang === "zh"
+      ? "正在打开 Phantom… 若无反应，请在钱包内置浏览器打开本页，或用浏览器密钥。"
+      : "Opening Phantom… If nothing opens, use the in-wallet browser, or Browser key.";
+    if (/Opening Solflare app/i.test(blob)) return lang === "zh"
+      ? "正在打开 Solflare… 若无反应，请在钱包内置浏览器打开本页，或用浏览器密钥。"
+      : "Opening Solflare… If nothing opens, use the in-wallet browser, or Browser key.";
+    if (/Phantom is not installed/i.test(blob)) return lang === "zh"
+      ? "未安装 Phantom。手机请用钱包内置浏览器打开，或桌面装扩展 / 用浏览器密钥。"
+      : "Phantom not installed. On phone open in wallet browser; on desktop install extension or use Browser key.";
     if (/Solflare is not installed/i.test(blob)) return lang === "zh"
-      ? "未安装 Solflare。请用 Phantom 或浏览器密钥。"
-      : "Solflare is not installed. Use Phantom, or Browser key.";
-    if (/too many requests|-32029|429/i.test(blob)) return lang === "zh"
-      ? "RPC 繁忙 (429)。稍等再试，未新签。"
-      : "RPC busy (429). Wait, then retry. Nothing new was signed.";
+      ? "未安装 Solflare。手机请用钱包内置浏览器打开，或桌面装扩展 / 用浏览器密钥。"
+      : "Solflare not installed. On phone open in wallet browser; on desktop install extension or use Browser key.";
+    if (/too many requests|-32029|429/i.test(blob)) return t("rpcBusy");
+    if (/mainnet|wrong.?cluster|network mismatch|custom program error: 0x1|Attempt to load|invalid account data/i.test(blob) && /mainnet|cluster|network/i.test(blob)) {
+      return t("wrongNet");
+    }
     if (/user rejected|rejected the request|user declined|cancelled|canceled/i.test(blob)) {
       return lang === "zh" ? "钱包拒绝签名。未发送。" : "Wallet rejected the signature. Nothing was sent.";
     }
@@ -211,32 +232,52 @@
   }
 
   async function pollConfirmed(sig) {
+    // Prefer getSignatureStatuses (HTTP) — avoid signatureSubscribe websockets that spike OnFinality 429.
     const started = Date.now();
-    let wait = 1200;
+    let wait = 1400;
+    let confirmed = false;
     while (Date.now() - started < 45000) {
       try {
-        const tx = await S().withBackoff(() =>
-          connection.getTransaction(sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 })
-        );
-        if (tx) {
-          if (tx.meta && tx.meta.err) {
+        const st = await S().withBackoff(() =>
+          connection.getSignatureStatuses([sig], { searchTransactionHistory: true })
+        , 5);
+        const val = st && st.value && st.value[0];
+        if (val) {
+          if (val.err) {
             const err = new Error("Transaction failed on chain.");
-            err.logs = tx.meta.logMessages || [];
             err.signature = sig;
             throw err;
           }
-          return tx;
+          const cs = val.confirmationStatus;
+          if (cs === "confirmed" || cs === "finalized") {
+            confirmed = true;
+            break;
+          }
         }
       } catch (err) {
-        if (!S().isRateLimit(err) && !(err.logs && err.message === "Transaction failed on chain.")) throw err;
-        if (err.logs && err.message === "Transaction failed on chain.") throw err;
+        if (err.message === "Transaction failed on chain.") throw err;
+        if (!S().isRateLimit(err)) throw err;
         wait = Math.min(wait * 2, 8000);
       }
       await new Promise((r) => setTimeout(r, wait));
     }
-    const err = new Error("Sent but not confirmed yet. Check explorer, then refresh.");
-    err.signature = sig;
-    throw err;
+    if (!confirmed) {
+      const err = new Error(lang === "zh"
+        ? "已发送但未确认。打开 explorer 查看，再点刷新。"
+        : "Sent but not confirmed yet. Check explorer, then refresh.");
+      err.signature = sig;
+      throw err;
+    }
+    // Optional meta/logs — soft-fail on 429
+    try {
+      const tx = await S().withBackoff(() =>
+        connection.getTransaction(sig, { commitment: "confirmed", maxSupportedTransactionVersion: 0 })
+      , 4);
+      return tx || { meta: { err: null, logMessages: [] } };
+    } catch (err) {
+      if (S().isRateLimit(err)) return { meta: { err: null, logMessages: [] } };
+      throw err;
+    }
   }
 
   async function prepareAndSend(buildFn, meta) {
@@ -484,23 +525,80 @@
     $("market-note").textContent = solOnly ? "" : t("notOnChain");
   }
 
+  const MIN_SOL_LAMPORTS = 20_000_000; // ~0.02 SOL for rent + fees
+
+  function isMobile() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
+  }
+
+  async function ensureDevnet(adapter) {
+    const provider = adapter.provider;
+    if (!provider || !provider.request) return { ok: true, switched: false };
+    // Best-effort switch; many wallets ignore or fail silently.
+    try {
+      await provider.request({ method: "wallet_switchNetwork", params: { network: "devnet" } });
+    } catch { /* optional */ }
+    try {
+      // Phantom sometimes exposes getAccount / connection network hints
+      if (provider.isPhantom && provider._connection && provider._connection.rpcEndpoint) {
+        const ep = String(provider._connection.rpcEndpoint);
+        if (/mainnet/i.test(ep) && !/devnet/i.test(ep)) {
+          return { ok: false, reason: "mainnet" };
+        }
+      }
+    } catch { /* ignore */ }
+    return { ok: true, switched: true };
+  }
+
   async function connect(kind) {
     if (busy) return;
     const factory = S().wallet[kind];
     if (!factory) return toast("Wallet adapter missing", "bad");
+    if ((kind === "phantom" || kind === "solflare") && isMobile()) {
+      // Deep-link / guidance: in-app browser is the reliable path on phones.
+      const hasExt = kind === "phantom"
+        ? !!(window.phantom && window.phantom.solana) || !!(window.solana && window.solana.isPhantom)
+        : !!(window.solflare && window.solflare.isSolflare);
+      if (!hasExt) {
+        toast(t("mobileWallet") + " " + t("browserKeyHint"), "wait", 9000);
+      }
+    }
     setBusy(true);
     try {
       const adapter = factory();
       setLink("connecting", "Connecting " + adapter.name + "…");
       toast("Connecting " + adapter.name + "…", "wait");
       await adapter.connect();
-      // Phantom/Solflare: force Devnet if they expose it
-      try {
-        if (adapter.provider && adapter.provider.request) {
-          await adapter.provider.request({ method: "wallet_switchNetwork", params: { network: "devnet" } }).catch(() => {});
-        }
-      } catch { /* optional */ }
+      const net = await ensureDevnet(adapter);
+      if (!net.ok) {
+        toast(t("wrongNet"), "bad", 10000);
+        setLink("error", t("wrongNet"));
+        try { await adapter.disconnect(); } catch { /* */ }
+        return;
+      }
       walletAdapter = adapter;
+      ensureClient();
+      // Gate: need Devnet SOL before initUser (rent). Clear ZH/EN toast + open faucet.
+      let lamports = 0;
+      try {
+        lamports = await S().withBackoff(() => connection.getBalance(adapter.publicKey), 5);
+      } catch (err) {
+        if (S().isRateLimit(err)) {
+          toast(t("rpcBusy"), "bad", 8000);
+          setLink("error", t("rpcBusy"));
+          return;
+        }
+        throw err;
+      }
+      if (lamports < MIN_SOL_LAMPORTS) {
+        const sol = (lamports / 1e9).toFixed(4);
+        toast(t("needSol") + " (" + sol + " SOL)", "bad", 12000);
+        setLink("error", t("needSol"));
+        try { window.open("https://faucet.solana.com", "_blank", "noopener"); } catch { /* */ }
+        // Keep wallet connected so user can retry after faucet, but do not initUser.
+        await loadState();
+        return;
+      }
       await loadState();
       const a = snap.actor;
       if (a && a.missing) {
@@ -515,8 +613,9 @@
       }
       toast(adapter.name + (lang === "zh" ? " 已连接。领水后入金。" : " connected. Faucet, then deposit."), "ok");
     } catch (err) {
-      toast(explain(err), "bad");
-      setLink("error", explain(err));
+      const msg = explain(err);
+      toast(msg, "bad", 9000);
+      setLink("error", msg);
     } finally {
       setBusy(false);
       render();

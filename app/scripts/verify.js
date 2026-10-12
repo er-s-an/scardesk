@@ -143,7 +143,7 @@ async function main() {
     await step("initialize desk", () => client.initialize(admin, params));
     desk = await client.readDesk();
   }
-  assertEq(desk.maxLeverage, 1000, "max leverage");
+  assertEq(desk.maxLeverage, params.maxLeverage, "max leverage");
   assert(desk.admin === admin.publicKey.toBase58(), "admin");
 
   for (const kp of [alice, bob]) {

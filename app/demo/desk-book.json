@@ -1,0 +1,26 @@
+{
+  "nextId": 2,
+  "positions": [
+    {
+      "id": "desk-1",
+      "market": "BTC/USD",
+      "owner": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh",
+      "who": "Alice",
+      "side": "long",
+      "status": "open",
+      "fundFrom": "balance",
+      "leverage": 25,
+      "margin": "5000000",
+      "notional": "125000000",
+      "entryPrice": "6500000000000",
+      "liqPrice": "6370000000000",
+      "exitPrice": "0",
+      "pnl": "0",
+      "scarMinted": "0",
+      "queuedCredit": "0",
+      "paidOut": "0",
+      "openedAt": "2026-10-12T05:44:34.401Z",
+      "deskBook": true
+    }
+  ]
+}

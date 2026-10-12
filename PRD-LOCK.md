@@ -6,7 +6,7 @@
 
 | # | 决议 |
 | --- | --- |
-| Q1 | SOL/USD only |
+| Q1 | **SOL/USD + BTC/USD + ETH/USD**（用户 2026-10-12 OVERRIDE；仍 Devnet demo stable，非主网） |
 | Q2 | Pyth + fixture 备用（非 Jupiter 公允价为主） |
 | Q3 | demo stable、同结算规则（非真 USDC） |
 | Q4 | **Scardesk** · loss-token **SCAR** · GitHub **`scardesk`** |
@@ -45,3 +45,15 @@ Build 已交比赛可，按本锁 + `FIDELITY.md` 运行。详见 `OPEN-QUESTION
 | **≤ 10-13 14:59 HKT** | **必须 Submit**（仍要用户点头一次才交） |
 
 产品化冲刺 **且** 保留提交窗口。Lane 不交。
+
+
+## 多标的 + 指标 OVERRIDE（2026-10-12 ~13:37 HKT · 用户群原文 · 经小可）
+
+| # | 决议 |
+| --- | --- |
+| M1 | 市场：**SOL + BTC + ETH**（不能只有一个）；仍 Devnet；非主网 |
+| M2 | 补技术指标 / 图表——盘面不能太难看；对照 papertrade.xyz |
+| M3 | 继续猛抄 papertrade 盘面（市场切换、图表/指标、红黑气质）；FIDELITY 对齐 |
+| M4 | SOL 签名开仓环 + 公网可签不停；多标的与指标并行，不拖死可签环 |
+| M5 | 不 Submit 直到用户点头 |
+

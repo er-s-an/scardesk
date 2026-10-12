@@ -1,6 +1,6 @@
 {
   "market": "SOL/USD",
-  "maxLeverage": 1000,
+  "maxLeverage": 1001,
   "haircutBps": 200,
   "liqFractionBps": 5000,
   "minMargin": "1000000",
@@ -11,5 +11,10 @@
   "dusdDecimals": 6,
   "scarDecimals": 6,
   "priceExpo": -8,
-  "notes": "All money is 6-decimal demo stable (dUSD). Prices are expo -8. These constants are provisional; see README."
+  "notes": "All money is 6-decimal demo stable (dUSD). Prices are expo -8. Markets SOL/BTC/ETH on the desk; only SOL settles on the live Devnet desk PDA tonight. These constants are provisional; see README.",
+  "markets": [
+    "SOL/USD",
+    "BTC/USD",
+    "ETH/USD"
+  ]
 }

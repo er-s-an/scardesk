@@ -10,6 +10,13 @@
 2. **用 Solana 做更疯的版本**（杠杆叙事、链上可见、结算强制）——**禁止 fork HL/HyperEVM**。  
 3. **UI/UX 布局与操作流全复刻**，再套 **红黑自有风格**——**禁止像素抄原站**。
 
+## OVERRIDE 2026-10-12 多标的+指标（用户群 · 经小可）
+
+- 市场从 SOL-only 改为 **SOL + BTC + ETH**（A18 / B8 / PRD-LOCK Q1→M1）。
+- 盘面补 **技术指标 / 图表**（对照 papertrade.xyz；红黑自有风格；禁像素抄）。
+- 可签环（Devnet SOL 先，市场切换后三市同环）与公网 desk **不停**；多标的并行。
+- 非主网。不 Submit 等点头。
+
 本清单进 PRD 附件；Build 以本页 + `PRD-LOCK.md` 为准。冲突时：**用户口径 > 本清单 > 旧 PRD §7「薄 MVP」措辞**（§7 已废止缩水边界）。
 
 ---
@@ -35,7 +42,7 @@
 | A15 | 色系语义 | 红黑自有风格；**红=涨**；跌用灰/暗色 | **非像素抄**原站 |
 | A16 | Demo 脚本 | 亏损铸币 **与** 赢利进队再靠亏损出队 **都演**（≤3min） | Q14=C |
 | A17 | 网络 / 资金 | Surfnet 优先（可落公共 devnet）；**demo stable、同结算规则** | 非主网真 USDC |
-| A18 | 标的 | **SOL/USD only** | Q1 |
+| A18 | 标的 | **SOL/USD + BTC/USD + ETH/USD**（用户 OVERRIDE 2026-10-12；市场切换；仍 Devnet） | Q1→M1 |
 | A19 | 价格源角色 | 开/平仓价 = 文档化 mid（**Pyth 主 + fixture 备用**） | 角色对齐「预言机 mid」，非 HL BBO 本身 |
 
 ---
@@ -51,7 +58,7 @@
 | B5 | Soft-cap / staker 分流 | MVP：fee 累计可 claim 最小环 | 不可 stake 无 claim 出口（除非标 stub 且 Demo 不依赖） |
 | B6 | Keeper / min notional | 可放宽 min margin/notional 便于 faucet 演示 | 不可取消孤立仓模型 |
 | B7 | Relayer / 官方 intent | **自建** session + 程序；不接未公开 papertrade relayer | 不可声称官方对接 |
-| B8 | 多市场 | 仅 SOL/USD | 不可扩成任意币本场 |
+| B8 | 多市场 | **SOL + BTC + ETH**（本场批准）；任意 CEX 级目录仍 post-Submit | 不可假装全市场 |
 | B9 | UI 视觉 | 布局/操作流对齐；红黑自绘组件 | **禁止**像素级抄原站资产 |
 | B10 | 主网真 USDC | 本场不做 | 真钱主网另开一轮 |
 

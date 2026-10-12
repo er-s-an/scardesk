@@ -46,6 +46,23 @@ const DEPLOYMENT = {
 };
 
 const BURNER_KEY = "scardesk-burner";
+
+function isMobileUa() {
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(root.navigator?.userAgent || "");
+}
+function openWalletBrowse(kind) {
+  const href = root.location?.href || "";
+  const enc = encodeURIComponent(href);
+  const ref = encodeURIComponent(root.location?.origin || href);
+  if (kind === "phantom") {
+    root.location.href = "https://phantom.app/ul/browse/" + enc + "?ref=" + ref;
+    return;
+  }
+  if (kind === "solflare") {
+    root.location.href = "https://solflare.com/ul/v1/browse/" + enc + "?ref=" + ref;
+  }
+}
+
 const root = typeof window !== "undefined" ? window : globalThis;
 
 class PhantomAdapter {
@@ -62,7 +79,13 @@ class PhantomAdapter {
   }
   async connect() {
     const provider = this.providerOrNull();
-    if (!provider) throw new Error("Phantom is not installed in this browser. Use Solflare, or Browser key.");
+    if (!provider) {
+      if (isMobileUa()) {
+        openWalletBrowse("phantom");
+        throw new Error("Opening Phantom app… If nothing opens, install Phantom and open this page inside the wallet browser, or use Browser key.");
+      }
+      throw new Error("Phantom is not installed in this browser. Use Solflare, or Browser key.");
+    }
     const res = await provider.connect();
     const key = (res && res.publicKey) || provider.publicKey;
     this.publicKey = new PublicKey(key.toString());
@@ -90,7 +113,13 @@ class SolflareAdapter {
   get name() { return "Solflare"; }
   async connect() {
     const provider = root.solflare;
-    if (!provider || !provider.isSolflare) throw new Error("Solflare is not installed in this browser. Use Phantom, or Browser key.");
+    if (!provider || !provider.isSolflare) {
+      if (isMobileUa()) {
+        openWalletBrowse("solflare");
+        throw new Error("Opening Solflare app… If nothing opens, install Solflare and open this page inside the wallet browser, or use Browser key.");
+      }
+      throw new Error("Solflare is not installed in this browser. Use Phantom, or Browser key.");
+    }
     await provider.connect();
     const key = provider.publicKey;
     if (!key) throw new Error("Solflare did not return a public key");

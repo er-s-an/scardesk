@@ -23060,11 +23060,12 @@ Message: ${transactionMessage}.
   var require_empty_path = __commonJS({
     "client/empty-path.js"(exports, module) {
       module.exports = {
-        join: (...parts) => parts.filter(Boolean).join("/"),
-        resolve: (...parts) => parts.filter(Boolean).join("/"),
+        join: (...parts) => parts.filter((p) => p != null && p !== "").map(String).join("/"),
+        resolve: (...parts) => parts.filter((p) => p != null && p !== "").map(String).join("/") || ".",
         dirname: (p) => {
-          const i2 = String(p).lastIndexOf("/");
-          return i2 <= 0 ? "." : p.slice(0, i2);
+          const s = String(p == null ? "." : p);
+          const i2 = s.lastIndexOf("/");
+          return i2 <= 0 ? "." : s.slice(0, i2);
         }
       };
     }
@@ -23088,7 +23089,8 @@ Message: ${transactionMessage}.
       } = require_index_browser_cjs();
       var math2 = require_math();
       var layout2 = require_layout();
-      var APP_ROOT = path.resolve(__dirname, "../..");
+      var __d = true ? "/" : ".";
+      var APP_ROOT = path.resolve(__d, "../..");
       var TOKEN_PROGRAM_ID2 = new PublicKey2("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA");
       var CONFIG_PATH = path.join(APP_ROOT, "config", "deployment.json");
       var PARAMS_PATH = path.join(APP_ROOT, "config", "params.json");
@@ -23812,6 +23814,21 @@ Message: ${transactionMessage}.
     faucetNote: "Permissionless demo faucet (IX 17): wallet signs, mints 1000 dUSD, 60s cooldown. Fee SOL still from https://faucet.solana.com."
   };
   var BURNER_KEY = "scardesk-burner";
+  function isMobileUa() {
+    return /Android|iPhone|iPad|iPod|Mobile/i.test(root.navigator?.userAgent || "");
+  }
+  function openWalletBrowse(kind) {
+    const href = root.location?.href || "";
+    const enc = encodeURIComponent(href);
+    const ref = encodeURIComponent(root.location?.origin || href);
+    if (kind === "phantom") {
+      root.location.href = "https://phantom.app/ul/browse/" + enc + "?ref=" + ref;
+      return;
+    }
+    if (kind === "solflare") {
+      root.location.href = "https://solflare.com/ul/v1/browse/" + enc + "?ref=" + ref;
+    }
+  }
   var root = typeof window !== "undefined" ? window : globalThis;
   var PhantomAdapter = class {
     constructor() {
@@ -23829,7 +23846,13 @@ Message: ${transactionMessage}.
     }
     async connect() {
       const provider = this.providerOrNull();
-      if (!provider) throw new Error("Phantom is not installed in this browser. Use Solflare, or Browser key.");
+      if (!provider) {
+        if (isMobileUa()) {
+          openWalletBrowse("phantom");
+          throw new Error("Opening Phantom app\u2026 If nothing opens, install Phantom and open this page inside the wallet browser, or use Browser key.");
+        }
+        throw new Error("Phantom is not installed in this browser. Use Solflare, or Browser key.");
+      }
       const res = await provider.connect();
       const key = res && res.publicKey || provider.publicKey;
       this.publicKey = new import_web3.PublicKey(key.toString());
@@ -23861,7 +23884,13 @@ Message: ${transactionMessage}.
     }
     async connect() {
       const provider = root.solflare;
-      if (!provider || !provider.isSolflare) throw new Error("Solflare is not installed in this browser. Use Phantom, or Browser key.");
+      if (!provider || !provider.isSolflare) {
+        if (isMobileUa()) {
+          openWalletBrowse("solflare");
+          throw new Error("Opening Solflare app\u2026 If nothing opens, install Solflare and open this page inside the wallet browser, or use Browser key.");
+        }
+        throw new Error("Solflare is not installed in this browser. Use Phantom, or Browser key.");
+      }
       await provider.connect();
       const key = provider.publicKey;
       if (!key) throw new Error("Solflare did not return a public key");

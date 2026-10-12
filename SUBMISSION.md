@@ -20,15 +20,15 @@ Do not invent explorer URLs or public Devnet program ids. Until `app/demo/public
 | Track | Solana Ecosystem |
 | Loss token | **SCAR** |
 | Brand | Scardesk / SCAR (not papertrade / PAPER) |
-| GitHub | **PENDING** — intended `https://github.com/er-s-an/scardesk` (repo not created yet; 404 as of draft). If private at Submit, grant `hackathon@colosseum.com`. |
-| Live app / desk | **PENDING public URL**. Local proof: `http://127.0.0.1:8787` on localnet (`HOW-TO-RUN.md`). |
-| Demo video | **PENDING** ≤3 min — must show on-chain settle path (SCAR mint + queue write). Screenshots: `app/demo/browser/`. |
-| Presentation / pitch video | **PENDING** 2–3 min — Problem → Solution → Demo → Team. |
-| Logo / graphic | **PENDING** — red-black desk mark; not a pixel copy of papertrade.xyz. |
+| GitHub | https://github.com/er-s-an/scardesk |
+| Live app / desk | https://er-s-an.github.io/scardesk/trade.html (local: `http://127.0.0.1:8787` via `npm run desk:devnet`) |
+| Demo video | **Local ready (pending Caesar review / upload):** `videos/scardesk-demo.mp4` (~2:48). Public URL still PENDING until reviewed and hosted. Screenshots: `app/demo/browser/`. |
+| Presentation / pitch video | **Local ready (pending Caesar review / upload):** primary `videos/scardesk-agent-market-huashu.mp4` (~2:40, Y1+T2); alt `videos/scardesk-pitch.mp4` (~2:40). See `videos/DELIVERY.md`. Public URL still PENDING. |
+| Logo / graphic | **Local ready:** `docs/scardesk-logo.png` (+ `docs/scardesk-logo.svg`) — red-black SCAR/DESK mark; not a pixel copy of papertrade.xyz. |
 | Team | Solo: **Caesar / 谢佳辰** (CityU, Computer & Data Engineering). GitHub: `er-s-an`. |
 | Location | Hong Kong |
 | Collateral this round | Demo stable **dUSD** (6 decimals). Not mainnet USDC. |
-| Public program | **BLOCKED** — admin `FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U` has **0 SOL** on reachable Devnet RPC. `public-proof.json` → `ok: false`. |
+| Public program | `E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b` on Devnet (`public-proof.json` ok: true). Explorer: https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet |
 | Lane | Backup only. **Do not Submit Lane.** |
 
 ---
@@ -37,7 +37,7 @@ Do not invent explorer URLs or public Devnet program ids. Until `app/demo/public
 
 Scardesk is a Solana remake of the synthetic-perps / loss-funded LP loop (independent experiment; not affiliated with papertrade.xyz). Traders open isolated SOL/USD positions against a desk LP. Losses and liquidations mint **SCAR** and repay a FIFO payout queue before leftover cash hits the LP. Wins the LP cannot fund return margin and enqueue the unpaid net. A session key may open and close; withdraw, stake, unstake, and claim stay with the owner on chain.
 
-This contest round settles on a local `solana-test-validator` with demo stable **dUSD**. The public Devnet program is **not deployed** yet (deployer has 0 SOL). Hermes needs a Pyth key; the desk can still read a sponsored Pyth SOL/USD account and fall back to a labeled provisional fixture.
+This contest round uses demo stable **dUSD** on **Devnet**. Public program `E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b` is deployed; judges can try https://er-s-an.github.io/scardesk/trade.html (connect → faucet → deposit → open → close). Hermes needs a Pyth key; the desk reads a sponsored Pyth SOL/USD account and falls back to a labeled provisional fixture. Local validator remains available for offline demos.
 
 ---
 
@@ -51,7 +51,7 @@ One native program (`app/programs/scardesk`). No order book. Each position is is
 
 `positions.open` · `positions.close` · `positions.closed` · `account.retrieve` · `paper.stake` · `paper.unstake` · `paper.claim`
 
-There is no `set_balance`, `set_pnl`, or `mint_free`. The faucet is an admin mint of dUSD, then a deposit — not an agent tool.
+There is no `set_balance`, `set_pnl`, or `mint_free`. Pages trade uses permissionless IX 17 `demo_faucet` (1000 dUSD / 60s cooldown), then deposit — not an agent tool. Local desk may still fall back to admin mint.
 
 **What is proven locally (not public explorer)**
 
@@ -60,14 +60,14 @@ There is no `set_balance`, `set_pnl`, or `mint_free`. The faucet is an admin min
 - Verify script exit 0 against local program id in `app/config/deployment.json` (local only — do not paste as Devnet).
 - Screenshots under `app/demo/browser/` (desktop + mobile).
 
-**Honest gaps at draft time**
+**Honest gaps at draft time (updated 2026-10-12 ~19:11 HKT)**
 
 - No Surfnet CLI on the build machine → no Surfnet claim.
-- No `explorer.solana.com` transaction yet.
-- Public Devnet deploy blocked on SOL (~3.2 SOL rent floor for upgradeable deploy). Official `api.devnet.solana.com` unreachable from this host; OnFinality Devnet answers but airdrop is disabled.
-- Hermes / Pyth benchmark HTTP 401 without `PYTH_API_KEY`.
-- GitHub `scardesk` and public desk URL not published yet.
-- Videos not recorded yet.
+- Devnet program live: `E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b` (`public-proof.json` ok: true). Explorer SCAR mint + queue write linked in `PITCH.md` / `public-proof.json`.
+- Pages trade desk live: https://er-s-an.github.io/scardesk/trade.html (IX 17 permissionless `demo_faucet`). GitHub: https://github.com/er-s-an/scardesk
+- Hermes / Pyth benchmark HTTP 401 without `PYTH_API_KEY`; desk reads sponsored Pyth SOL/USD account with labeled fixture fallback. OnFinality public RPC can 429 on send/confirm.
+- Videos + logo are **local drafts** under `videos/` and `docs/scardesk-logo.*` — awaiting Caesar review; no public upload yet; do not Submit until nod.
+- Wallet hard-refresh retest of Pages signing loop still waiting on Caesar before Submit.
 
 ---
 
@@ -75,7 +75,7 @@ There is no `set_balance`, `set_pnl`, or `mint_free`. The faucet is an admin min
 
 | Layer | Choice |
 | --- | --- |
-| Chain | Solana (localnet this round; Devnet when funded) |
+| Chain | Solana Devnet (public program live); localnet still available for offline demos |
 | Program | Native SBF (`cargo-build-sbf`), custom `scardesk` program — **not** Anchor, **not** a Hyperliquid / HyperEVM fork |
 | Client | Node.js (`@solana/web3.js`), desk server + red-black blotter UI |
 | Oracle | Pyth SOL/USD role: Hermes when keyed; else sponsored account read `7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE` on Devnet RPC; else provisional fixture @ 100 |
@@ -97,7 +97,7 @@ Background for the portal (keep factual; do not inflate): AI-agent builder; Adve
 
 ---
 
-## Pitch video outline (2–3 min — NOT recorded)
+## Pitch video outline (2–3 min — local mp4 ready, not uploaded)
 
 Spoken draft with the click path: `PITCH.md`. Do not record from the outline below if it drifts from that file.
 
@@ -109,7 +109,7 @@ Spoken draft with the click path: `PITCH.md`. Do not record from the outline bel
 
 ---
 
-## Demo video outline (≤3 min — NOT recorded)
+## Demo video outline (≤3 min — local mp4 ready, not uploaded)
 
 Must show the settlement loop (FIDELITY A16):
 
@@ -183,4 +183,4 @@ Prefer: `trading`, `defi`, `ai` (agent tool surface). Max whatever the form allo
 
 ## Status line for humans
 
-Drafted 2026-10-12 HKT. **Ready to paste after:** Devnet deploy + explorer sigs, public GitHub `scardesk`, desk URL, two videos, logo. See `SUBMIT-CHECKLIST.md`. **Do not Submit until Caesar nods.**
+Updated 2026-10-12 ~19:11 HKT. Devnet + Pages + explorer proofs live. Local pitch/demo videos + logo on disk (`videos/DELIVERY.md`, `docs/scardesk-logo.png`). Still need: Caesar video review, public video URLs, Pages signing hard-refresh nod, then explicit Submit nod. See `SUBMIT-CHECKLIST.md`. **Do not Submit until Caesar nods.**

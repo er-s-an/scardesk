@@ -1,0 +1,49 @@
+{
+  "ok": true,
+  "market": "ETH/USD",
+  "source": "pyth-account",
+  "cluster": "mainnet-beta",
+  "account": "42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC",
+  "rpc": "https://solana.api.pocket.network",
+  "feed": "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+  "price": "253827001684",
+  "expo": -8,
+  "conf": "129027965",
+  "publishTime": "1791805674",
+  "attempts": [
+    {
+      "source": "hermes",
+      "status": 401,
+      "market": "ETH/USD",
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-benchmarks",
+      "status": 401,
+      "market": "ETH/USD",
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-account",
+      "cluster": "devnet",
+      "account": "42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC",
+      "status": 429,
+      "error": "Too Many Requests, Please apply an OnFinality API key or contact us to receive a higher rate limit"
+    },
+    {
+      "source": "pyth-account-pro",
+      "cluster": "devnet",
+      "account": "7odryi4WfoMFHtv2eubdMgP1pqQMmdiXSK1N2tqZ2nRH",
+      "status": 429,
+      "error": "Too Many Requests, Please apply an OnFinality API key or contact us to receive a higher rate limit"
+    },
+    {
+      "source": "pyth-account",
+      "cluster": "mainnet-beta",
+      "account": "42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC",
+      "status": 200
+    }
+  ],
+  "note": "Sponsored Pyth ETH/USD account on mainnet-beta. Hermes still returns 401 without PYTH_API_KEY.",
+  "at": "2026-10-12T11:47:55.916Z"
+}

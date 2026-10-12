@@ -1,14 +1,47 @@
 # Scardesk
 
-**STATUS: local wallet path works. Public program not deployed.** See `STATUS.md`.
+**Live trade UI (GitHub Pages):** https://er-s-an.github.io/scardesk/trade.html  
+**Repo:** https://github.com/er-s-an/scardesk · Pages source: `main` branch path `/docs`
 
-Synthetic perps · Loss-funded LP · FIFO payouts.
+Synthetic perps · Loss-funded LP · FIFO payouts · Solana program + JS client.
 
-SOL/USD only. Loss token is **SCAR**. Collateral is **dUSD**, a demo stable with the same settlement rules as a 6-decimal stablecoin. This round runs on a local `solana-test-validator`. The Surfnet CLI is not installed on this machine, so this demo does not claim Surfnet. Hermes returns HTTP 401 without `PYTH_API_KEY`. The desk reads a sponsored Pyth SOL/USD account on devnet and falls back to a provisional fixture at 100. The public program is not deployed. No mainnet funds. Not submitted.
-
-Independent experiment. Not affiliated with papertrade.xyz.
+SOL/USD settles on-chain (Devnet). BTC/ETH use desk-book marks until market PDAs exist. Loss token is **SCAR**. Collateral is **dUSD** (demo stable, 6 decimals). No mainnet funds. Independent experiment — not affiliated with papertrade.xyz. Not submitted to Colosseum.
 
 高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。
+
+## Try it
+
+1. Open **https://er-s-an.github.io/scardesk/trade.html**
+2. Connect Phantom / Solflare (Devnet) or use the burner path on the page
+3. Faucet demo dUSD → deposit → open/close. Session key may trade; withdraw/stake need the owner.
+
+Static preview (no wallet): https://er-s-an.github.io/scardesk/
+
+## Build & run from source
+
+```bash
+git clone https://github.com/er-s-an/scardesk.git
+cd scardesk/app
+npm install
+npm test
+# Devnet desk (reads app/config/deployment.devnet.json)
+npm run desk:devnet
+# then open http://127.0.0.1:8787
+```
+
+Localnet: start `solana-test-validator` (see `HOW-TO-RUN.md`), then `npm run desk:localnet`.
+
+Rebuild the public Pages client bundle into `docs/`:
+
+```bash
+cd app && npm run pages:bundle
+```
+
+Program sources: `app/programs/scardesk/`. Client: `app/client/`. Desk UI: `app/desk/`. Public config: `app/config/` (`deployment.json` / `deployment.devnet.json` are addresses only — keypairs stay in gitignored `app/keys/`).
+
+Full runbook: **`HOW-TO-RUN.md`**. Pitch / submission notes: `PITCH.md`, `SUBMISSION.md` (do **not** auto-Submit).
+
+**STATUS:** Devnet desk is switchable. Public proof includes queue write, SCAR mint, and 1001×. See `STATUS.md`.
 
 ## What settles on chain
 
@@ -57,7 +90,7 @@ shortfall = net - user_take
 
 Vault SPL dUSD moves only on deposit and withdraw. Settlement is internal: vault amount = desk.vault_accounted = sum of balances + open cash margins + lp_cash. Queued claims are not cash.
 
-Provisional constants in `app/config/params.json`: max leverage 1000, haircut 200 bps, liquidation fraction 5000 bps, min margin 1 dUSD, emission 100, oracle max age 120 seconds.
+Provisional constants in `app/config/params.json`: max leverage 1001, haircut 200 bps, liquidation fraction 5000 bps, min margin 1 dUSD, emission 100, oracle max age 120 seconds. The Devnet desk account reads `maxLeverage` 1001. The worked example below was run when the local ceiling was 1000.
 
 ## Worked example (this ledger)
 
@@ -84,7 +117,7 @@ After that proof, the desk UI was clicked through on the same ledger: two flat 1
 
 A later pass on this same ledger, without `--reset`, is in `BROWSER-PROOF.md`. Alice is still 1087 dUSD. Bob’s queued 27.24 was paid, so the desk shows Bob at 939.24 dUSD. The live queue head is no longer Bob’s 7.44. Hermes is still HTTP 401. A later desk start reads the sponsored Pyth account `7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE` (about 111.10 at the 2026-10-12 read) and pushes that number. The fixture at 100 remains the fallback and is labeled provisional.
 
-Addresses: `app/config/deployment.json`. Raw log: `app/demo/last-run.json`. Last price read: `app/fixtures/hermes-last.json`. Public deploy attempt: `app/demo/public-proof.json` (`ok: false`).
+Local addresses: `app/config/deployment.json`. Devnet addresses: `app/config/deployment.devnet.json`. Raw local log: `app/demo/last-run.json`. Last price read: `app/fixtures/hermes-last.json`. Public proof: `app/demo/public-proof.json` (`ok: true`).
 
 ## Desk
 
@@ -108,7 +141,7 @@ solana confirm -v <signature> --url http://127.0.0.1:8899
 
 The current ledger at `/tmp/scardesk-ledger` already holds the proof. Resetting it drops those signatures. Rebuild the program with platform-tools v1.41 (`cargo-build-sbf`); the host cargo must not rewrite `Cargo.lock` to version 4. `npm test` is a syntax check of the client, verify script, and desk.
 
-Wallet buttons, the numbered devnet switch, and the public-deploy attempt are in `HOW-TO-RUN.md`. `npm run proof` did not deploy. Admin devnet balance is 0 lamports, and the script now refuses a deploy below 3.2 SOL. `deployment.json` stays on localnet. `SCARDESK_ACTIVATE` was not set. Gaps are in `GAP-CHECKLIST.md`. The clicked loop is in `BROWSER-PROOF.md`.
+Wallet buttons and the Devnet switch are in `HOW-TO-RUN.md`. `deployment.json` stays on localnet. `SCARDESK_ACTIVATE` was not set. Gaps are in `GAP-CHECKLIST.md`. The clicked loop is in `BROWSER-PROOF.md`.
 
 ## Provisional deltas
 
@@ -119,7 +152,7 @@ Each row is a simplification relative to the reference product. The behavior it 
 | B1 | Price is a Pyth mid plus a fixture, not an exchange BBO | SOL/USD feed `ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d`, expo −8. Hermes HTTP 401 without `PYTH_API_KEY`. The desk reads sponsored account `7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE` on devnet. Fresh if `publish_time` is inside the desk window. A publish time outside the cluster clock is stored as the cluster timestamp, and the price number is kept. Else the fixture at 100, labeled provisional. |
 | B2 | Emission curve | 100 SCAR per 1 dUSD of qualified loss while the tracked LP is small. |
 | B3 | Win haircut | 200 bps, pro-rata on the LP-funded portion only. |
-| B4 | Liquidation threshold | `liq_fraction_bps = 5000`. At 1000× a 5 bp adverse move liquidates the whole margin. |
+| B4 | Liquidation threshold | `liq_fraction_bps = 5000`. At 1001× about 5 bp adverse move liquidates the whole margin. |
 | B5 | Staker fee split | Minimal harvest: fees accrue in `acc_reward` and pay out on claim. No soft-cap curve. |
 | B6 | Minimum margin | 1 dUSD, relaxed so a faucet demo can open. Isolated margin is unchanged. |
 | B7 | Session / relayer | Self-built session account. No official relayer. |
@@ -129,7 +162,7 @@ Each row is a simplification relative to the reference product. The behavior it 
 
 | | Reference | Scardesk |
 | --- | --- | --- |
-| Chain | venue stack | Solana program, local validator this round |
+| Chain | venue stack | Solana program on Devnet, local validator still available |
 | Price | venue BBO mid | Sponsored Pyth account, else provisional fixture |
 | Market | multiple | SOL/USD |
 | Cash | mainnet stablecoin | dUSD demo stable |

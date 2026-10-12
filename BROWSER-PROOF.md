@@ -1,6 +1,33 @@
 # Browser proof
 
-## UX pass, 2026-10-12
+## Devnet desk, 2026-10-12 afternoon
+
+Desk `http://127.0.0.1:8787`, started with `SCARDESK_NETWORK=devnet`. Footer: `Demo stable on devnet · deployment.devnet.json`. RPC `https://solana-devnet.api.onfinality.io/public`. No Phantom or Solflare extension, so the trading path is the browser key. Alice's 1001× (position 2) was left open.
+
+Shots in `app/demo/browser/`: `devnet-desktop.png`, `devnet-margin-toast.png`, `devnet-lev-toast.png`, `devnet-open.png`, `devnet-positions.png`, `devnet-phantom.png`, `devnet-mobile.png`, `devnet-disconnect.png`, `devnet-preview.png`, `devnet-session-reject.png`.
+
+| Step | What the page did |
+| --- | --- |
+| Load, browser key `D2Ba…kQch` already in this browser | Status `devnet · your wallet · Browser key D2Ba…kQch · solana-devnet.api.onfinality.io/public`. Balance 0 dUSD. Wallet line "Wallet holds 0 dUSD." Next step names faucet, then deposit. |
+| Open at margin 100 while desk balance is 0 | Toast and ticket note: "Desk balance is 0 dUSD. Faucet, then deposit, or lower the margin." Nothing signed. |
+| Leverage 1002 | Toast and note: "Leverage must be from 1 to 1001." Notional blank. Nothing signed. |
+| Poll while the public RPC is hot | Link and banner: "The RPC is busy (429). Wait a few seconds. Nothing new was signed." / "RPC busy (429). The desk will retry." |
+| Faucet 1000 | Toast `Landed 3Yc3ss9ugBCa`. Wallet holds 1000 dUSD. Desk balance still 0. Next step says to deposit. |
+| Deposit 100 | Toast `Landed 4ifRgaatz1Nd`. Balance 100 dUSD. Wallet holds 900. Full signature `4ifRgaatz1NdX4ybmsgJQ9UDcq3oFghqSGzbUVMSb2deBMFssu26X7QBdJVMDHMBB2kB8qkCMKTd1yd9JFbn582h`. |
+| Open long, margin 10, leverage 2 | First click logged a 429 and did not open. Retry landed `5JbCwfY99dNk4ZfKGeGWrmBHLMvsGhX5Z793RBGExrmG8F9bQaKhFMSetwiZNNaUWCdpFc1T7tJvjhidWcCTU6V5`. Balance 90. Opens 1. Row "You long 2×". A later poll overwrote the toast with the 429 sentence; the position row is the evidence. |
+| Close that 2× | Clicked the only Close button, on the You row. Toast stayed the 429 sentence. Opens stayed 1. Balance stayed 90. Not forced through. |
+| Queue and SCAR, same screen | Head Alice profit 18, then Alice profit 98. SCAR supply 8000. Bob's closed row shows 8000 SCAR. No new mint and no new queue write in this pass. |
+| Phantom | "Phantom is not installed in this browser. Use Solflare, or Browser key." |
+| Solflare | "Solflare is not installed in this browser. Use Phantom, or Browser key." |
+| Disconnect | "Disconnected. The blotter is back on Alice. The browser key stays in this browser." Alice balance 479 dUSD. Link `devnet · wallet not connected`. |
+| Signature rejection | No wallet dialog exists here. `explain(new Error("User rejected the request"))` returns "The wallet rejected the signature. Nothing was sent." |
+| Session withdraw | Earlier the same day, Alice session withdraw toasted the trade-but-not-withdraw sentence and left 479 dUSD. Not repeated this continuation. |
+| 390px | Header, three wallet buttons, Solflare sentence, banner, and account stack. Alice 479 / queued 116 visible without a horizontal scroll on that first screen. |
+| `/preview.html` | Read-only. Three-step Devnet instructions, program id, and links for queueWrite, scarMint, and the 1001× open. Figures are labeled as a local snapshot, not live balances. |
+
+A failed SOL read during an earlier connect tried an airdrop and toasted 429. The desk now skips that airdrop when the balance is a dash. A later connect showed 0.097 SOL and did not airdrop.
+
+## UX pass, 2026-10-12 (localnet)
 
 Same desk, `http://127.0.0.1:8787`, ledger not reset. A fresh browser profile had no saved key, so **Browser key** created `GwJp3c4h87mKEPQZhCSaFktgKbWTm5C6ssWomdy1uAyu`, airdropped fee SOL (about 0.995 SOL left), and created the desk user and the dUSD wallet. Balance stayed 0 dUSD. No position was opened. Alice stayed 1087 dUSD, owner `CKiK…pmQh`.
 

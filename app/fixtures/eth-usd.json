@@ -1,0 +1,7 @@
+{
+  "market": "ETH/USD",
+  "hermesId": "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+  "expo": -8,
+  "snapshotPrice": "350000000000",
+  "note": "Provisional ETH/USD fixture when Hermes and the sponsored Pyth account are both unreadable. Live path reads shard 0 of the Pyth push oracle."
+}

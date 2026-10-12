@@ -1,3 +1,17 @@
+STATUS = trade.html Client-bundle-fail fixed (__dirname). Pages 3595290. Not submitted.
+
+Checked 2026-10-12 ~14:02 HKT. This build did not Submit. Lane does not submit.
+
+## trade.html fail fix (2026-10-12 ~14:02 HKT)
+
+- **Root cause:** `scardesk-client.js` threw `ReferenceError: __dirname is not defined` at `chain.js` `path.resolve(__dirname, …)` → `window.Scardesk` never set → trade-app body replaced with “Client bundle failed to load.”
+- **Fix:** guard `__dirname` in chain/price/markets-runtime; esbuild `--define:__dirname="/"`; rebuild; force-push `er-s-an/scardesk` **3595290**.
+- **UX extras on Pages:** &lt;0.02 SOL gate + faucet.solana.com; 429 toast; mobile wallet deep links / hints.
+- **Write-up:** `app/demo/trade-fail-fix.md`. Live: https://er-s-an.github.io/scardesk/trade.html (CDN may lag ~10 min).
+- **No Submit.** No mainnet. 1001× unchanged.
+
+---
+
 STATUS = Public in-page dUSD faucet live (permissionless IX 17). Pages trade.html one-click. Not submitted.
 
 Checked 2026-10-12 ~13:56 HKT (executor faucet follow-up). This build did not Submit. Lane does not submit. `SCARDESK_ACTIVATE` was not set. 1001× left in place. No mainnet.
@@ -97,3 +111,13 @@ Submit pack drafted earlier: `SUBMISSION.md` + `SUBMIT-CHECKLIST.md`. Not submit
 ## Public Pages trade (2026-10-12 ~13:50 HKT)
 
 Architecture A shipped: https://er-s-an.github.io/scardesk/trade.html (HTTP 200). Browser prepare+send via OnFinality Devnet; no tunnel. Open/close proven with same DeskClient prepare+send path (Alice): open `wNd7jLcjLFEjL6JHmkVxRRrizUPsjq1VzQzRo3yH21yaBhhLvhtpW7eL7CRjzRccK3VDz3SdKRjDde3EUPVRNej`, close `58QfepjGLRXsyTEAw7qEKGNvQ8LgmrFNFPUiRcZYmM9B4zsawioHh5AgjagrKvfosuduYubzQeQCZVdBxJkDNRzQ`. Faucet still admin-only. Local :8787 unchanged. Not submitted.
+
+## 2026-10-12 trade.html __dirname fix
+- Root cause: chain.js `path.resolve(__dirname)` in browser bundle → ReferenceError → Client bundle failed.
+- Fix: guard __dirname + esbuild `--define:__dirname="/"`; rebuilt scardesk-client.js; force-pushed er-s-an/scardesk `3595290`.
+- Mobile: Phantom/Solflare browse deep links + narrow CSS + hint. No Submit.
+- Live: https://er-s-an.github.io/scardesk/trade.html
+
+## 2026-10-12 trade.html verified
+- Live UI PASS after __dirname fix; mobile stack PASS; hint CSS cascade fixed in 6fd6785.
+- Residual: OnFinality 429. No Submit until user walks connect→faucet→open.

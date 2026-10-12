@@ -1,7 +1,10 @@
 node_modules/
 app/node_modules/
 app/keys/
+**/keys/
 *.keypair
+*-keypair.json
+**/target/deploy/*-keypair.json
 .env
 .env.*
 !.env.example
@@ -17,3 +20,7 @@ test-ledger/
 *.so.bak
 .cache/
 dist/
+videos/
+*.mp4
+*.mov
+*.webm

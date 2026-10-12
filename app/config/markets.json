@@ -1,0 +1,41 @@
+{
+  "default": "SOL/USD",
+  "markets": [
+    {
+      "id": "SOL/USD",
+      "base": "SOL",
+      "quote": "USD",
+      "hermesId": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+      "sponsoredAccount": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+      "fixtureFile": "sol-usd.json",
+      "fixturePrice": "10000000000",
+      "fixtureExpo": -8,
+      "onChain": true,
+      "note": "Live Devnet desk PDA. Opens settle on-chain."
+    },
+    {
+      "id": "BTC/USD",
+      "base": "BTC",
+      "quote": "USD",
+      "hermesId": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+      "sponsoredAccount": "4cSM2e6rvbGQUFiJbqytoVMi5GgghSMr8LwVrT9VPSPo",
+      "fixtureFile": "btc-usd.json",
+      "fixturePrice": "6500000000000",
+      "fixtureExpo": -8,
+      "onChain": false,
+      "note": "Desk multi-market. Mark from Pyth/fixture. Opens use desk-book until a BTC desk PDA exists."
+    },
+    {
+      "id": "ETH/USD",
+      "base": "ETH",
+      "quote": "USD",
+      "hermesId": "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+      "sponsoredAccount": "42amVS4KgzR9rA28tkVYqVXjq9Qa8dcZQMbH5EYFX6XC",
+      "fixtureFile": "eth-usd.json",
+      "fixturePrice": "350000000000",
+      "fixtureExpo": -8,
+      "onChain": false,
+      "note": "Desk multi-market. Mark from Pyth/fixture. Opens use desk-book until an ETH desk PDA exists."
+    }
+  ]
+}
