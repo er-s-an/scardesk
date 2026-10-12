@@ -1,3 +1,49 @@
+STATUS = Public SOL loop honesty pass. Program upgraded on Devnet. trade.html is the entry. Not submitted.
+
+Checked 2026-10-13. This build did not Submit. No mainnet. No user-interview numbers.
+
+## What a new wallet does
+
+1. Open https://er-s-an.github.io/scardesk/trade.html (GitHub Pages can lag after the push).
+2. Switch the wallet to Devnet. Connect Phantom, Solflare, or the browser key.
+3. Fee SOL: https://faucet.solana.com (at least 0.02). This RPC refuses airdrops.
+4. On the page, sign「领水 1000 dUSD」. That mint is permissionless (IX 17), 60s cooldown, and lands in the wallet, not in a position.
+5. Deposit. The six figures stay separate: wallet dUSD, withdrawable cash, locked margin, unrealized PnL, queued claim, SCAR / claimable reward. There is no combined total.
+6. Open SOL/USD from withdrawable cash only. The ticket shows liquidation price and that a trigger takes the entire margin. 1001× is still the desk cap, not the default.
+7. Close from the positions table. The receipt separates cash paid from a queued claim. History keeps closes and liquidations apart.
+8. Withdraw only up to withdrawable cash.
+9. BTC and ETH switch the quote. They do not reuse the SOL mark and they cannot open. SCAR is labeled 机制测试, with no price and no APY. Session register does not auto-trade; the program still has no margin budget, market, leverage, or expiry cap.
+
+## Fixed this round
+
+- B07 price scale is one integer function (`scaleToExpo`) with tests.
+- B02 close account list walks the FIFO batch, including a partial head, in `planBatch`. `npm test` runs those vectors (`invariants ok`).
+- B09 `prepareAs` saves and restores fee-payer state; overlapping prepares do not clobber each other. Covered by the invariant script.
+- B01 deposit and withdraw compare vault balance with `vault_accounted` before the transfer. Surplus is logged and is not credited to a user. A short vault rejects the action. Host tests do not execute the token CPI.
+- B03 reward index no longer republishes the same micro. Rust tests `reward_dust_is_not_reapplied` and `reward_flush_never_exceeds_pending` passed.
+- B04 settle logs `mark` and `realized`. Liquidation realized is the full margin.
+- B06 `push_oracle` rejects `publish_time <= 0` and a stamp outside `oracle_max_age` (120s on this desk). It does not rewrite 0 to now. Fixture fallback uses the same window. The local desk publisher now retries every 45s instead of 180s.
+- Public UI: cash-only opens, six balances, market quotes, chart pill「采样」, tx rows for 等待签名 / 已提交 / 结果待确认 / 已结算. An unknown signature is kept and not resent.
+- Index leads to trade.html. The frozen chart is labeled 样例. Alice figures are sample numbers. Faucet copy matches IX 17.
+
+## Chain proof
+
+- Program `E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b` upgraded. Last deployed slot **510362383** (was 510164873). Upgrade authority unchanged. No admin secret in Pages JS.
+- After upgrade, a real Pyth publish was pushed (not clock-stamped): `5VTPQU2cxYwpn4A1cr2QhzwcDPLPQZEGmNfEzzDFP9LbQNAtz61iFNNH7NRjZK1DfWAQnyUFYiyPTztmsnqnVXsD`. Read-back: source pyth, 107.38093257, inside the 120s window. Vault accounted still `1300000000`.
+- A failed first deploy left buffer `7EHdbewC8QNRdoMYYhibgsTN8VCxzAAEyQJqooqUYkGv`. It was closed. Authority balance returned to about 3.37 SOL.
+- Browser on the local Pages files: SOL showed 链上标记 107.53 while the oracle was fresh; BTC showed 82,413.96 and ETH 2,513.65, each labeled 参考报价, chart pill 采样, not LIVE. Guest history and the six labels render. No wallet extension was available, so faucet, deposit, open, close, and withdraw were not signed in this browser.
+
+## Still true
+
+- The mark is an admin copy of a Pyth account (B05). The page says 链上标记, not LIVE.
+- Queued-claim opens stay off. SCAR is not a cash price. Session has no hard budget, so the page will not trade unattended.
+- BTC/ETH are not a second on-chain desk.
+- If the publisher stops, SOL opens and closes wait. That is the stale-price rule, not a hidden fixture fill.
+- This round did not send a user deposit or withdraw, so the surplus inequality was not proven with a wallet signature.
+- Not submitted to Colosseum.
+
+---
+
 STATUS = trade.html Client-bundle-fail fixed (__dirname). Pages 3595290. Not submitted.
 
 Checked 2026-10-12 ~14:02 HKT. This build did not Submit. Lane does not submit.

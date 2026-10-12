@@ -16,14 +16,23 @@
   let connection = null;
   let client = null;
   let snap = null;
-  let lastPx = null;
-  let lastDir = 0;
   let side = "long";
   let market = "SOL/USD";
   let busy = false;
   let log = [];
-  let ticks = [];
+  let ticksByMarket = { "SOL/USD": [], "BTC/USD": [], "ETH/USD": [] };
+  let lastPxBy = {};
+  let lastDirBy = {};
   let previewLiq = null;
+  let quotes = {};
+  let openLocked = false;
+  const ATTEMPT_KEY = "scardesk.attempts.v1";
+  const SESSION_KEY = "scardesk.session.v1";
+  const FEEDS = {
+    "BTC/USD": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+    "ETH/USD": "ff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+  };
+  const PYTH_PUSH = "pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT";
 
   const I18N = {
     zh: {
@@ -43,9 +52,9 @@
       browserKey: "浏览器密钥",
       long: "做多",
       short: "做空",
-      balance: "余额",
+      balance: "可提现余额",
       walletHold: "钱包 dUSD",
-      queued: "排队中",
+      queued: "待兑付利润",
       opens: "持仓数",
       margin: "保证金 dUSD",
       leverage: "杠杆",
@@ -117,6 +126,57 @@
       pythNote: "链上 Pyth",
       flatNote: "红 = 涨",
       chartSample: "本次会话采样",
+      chartNoteRef: "这条线是本次打开页面后采到的参考价，不是历史 K 线。这个市场不能开仓，链上结算仍是 SOL/USD。",
+      cashOnly: "资金来源：现金保证金。债权开仓未开放。",
+      hintWallet: "在钱包里，还没存进交易账户",
+      hintCash: "已入金、未锁定。出金只取这一项",
+      hintLocked: "锁在未平仓里，不能提出",
+      hintUpnl: "按标记价估算，不是现金",
+      hintQueued: "债权。没有到账期限，不能当余额",
+      hintScar: "SCAR 不折成美元。奖励领取后才进可提现余额",
+      locked: "持仓保证金",
+      upnl: "未实现盈亏",
+      scarLine: "SCAR / 奖励",
+      history: "已结束",
+      histNote: "平仓与清算分开",
+      thStatus: "结果",
+      thPnl: "标记盈亏",
+      thRealized: "实际结果",
+      closed: "已平仓",
+      liquidated: "已清算",
+      realizedAll: "没收全部保证金",
+      noHist: "还没有已结束的仓。",
+      scarTest: "机制测试",
+      scarBody: "亏损会铸造 SCAR。对向仓刷奖励的路径还没关掉，所以这里不标价、不显示年化，也不把 SCAR 说成可兑付收益。",
+      scarFree: "可用",
+      scarStaked: "已质押",
+      scarClaim: "可领取 dUSD",
+      stake: "质押",
+      unstake: "解除",
+      claim: "领取奖励",
+      session: "会话",
+      sessionOff: "不自动交易",
+      sessionBody: "可以登记一个会话公钥：它能开仓和平仓，不能出金、质押或领取。链上还没有保证金预算、市场、杠杆和期限的硬限制，所以本页不会替你自动下单。",
+      sessionArm: "登记会话",
+      sessionClear: "撤销会话",
+      sessionNone: "未登记。撤销只影响之后的会话交易，已有仓仍用主钱包平。",
+      sessionOn: "已登记",
+      notTradable: "此市场不能开仓",
+      priceBlocked: "停止新开仓",
+      priceBlockedBody: "标记价不是新鲜的链上报价。平仓仍可用，新开仓先停。",
+      loadingQuote: "正在加载报价",
+      quoteMissing: "报价不可用，不能沿用上一个市场的价格",
+      refOnly: "参考报价 · 链上结算仅 SOL",
+      deskMark: "链上标记",
+      samplePill: "采样",
+      unknownTx: "结果待确认。已保留签名，不会自动再发一笔。",
+      statusWait: "等待签名",
+      statusSubmitted: "已提交",
+      statusUnknown: "结果待确认",
+      statusConfirmed: "已结算",
+      statusFailed: "链上失败",
+      statusCancelled: "已取消签名",
+      withdrawCap: "出金不能超过可提现余额。",
     },
     en: {
       banner: "Devnet · real signatures · not mainnet",
@@ -135,9 +195,9 @@
       browserKey: "Browser key",
       long: "Long",
       short: "Short",
-      balance: "Balance",
+      balance: "Withdrawable cash",
       walletHold: "Wallet dUSD",
-      queued: "Queued",
+      queued: "Queued claim",
       opens: "Pos.",
       margin: "Margin dUSD",
       leverage: "Leverage",
@@ -209,6 +269,57 @@
       pythNote: "On-chain Pyth",
       flatNote: "Red = up",
       chartSample: "This session",
+      chartNoteRef: "This line is the reference price sampled since you opened the page. It is not history. This market cannot open. On-chain settlement stays SOL/USD.",
+      cashOnly: "Fund from: cash margin. Queued-claim opens stay off.",
+      hintWallet: "In the wallet. Not deposited yet",
+      hintCash: "Deposited and free. Withdraw uses only this",
+      hintLocked: "Locked in an open position",
+      hintUpnl: "Mark estimate. Not cash",
+      hintQueued: "A claim. No payout date. Not a balance",
+      hintScar: "SCAR is not dollars. Rewards join cash only after claim",
+      locked: "Margin locked",
+      upnl: "Unrealized PnL",
+      scarLine: "SCAR / rewards",
+      history: "Closed",
+      histNote: "Closes and liquidations stay distinct",
+      thStatus: "Result",
+      thPnl: "Mark PnL",
+      thRealized: "Cash result",
+      closed: "Closed",
+      liquidated: "Liquidated",
+      realizedAll: "Entire margin seized",
+      noHist: "No closed or liquidated positions yet.",
+      scarTest: "Mechanism test",
+      scarBody: "Losses mint SCAR. The wash-trade path is still open, so this page shows no price, no APY, and no promise that SCAR pays cash.",
+      scarFree: "Free",
+      scarStaked: "Staked",
+      scarClaim: "Claimable dUSD",
+      stake: "Stake",
+      unstake: "Unstake",
+      claim: "Claim rewards",
+      session: "Session",
+      sessionOff: "No auto trading",
+      sessionBody: "You can register a session key. It can open and close. It cannot withdraw, stake, or claim. The program has no margin budget, market, leverage, or expiry yet, so this page will not trade for you.",
+      sessionArm: "Register session",
+      sessionClear: "Revoke session",
+      sessionNone: "None registered. Revoke stops later session trades. Open positions still close from the owner wallet.",
+      sessionOn: "Registered",
+      notTradable: "This market cannot open",
+      priceBlocked: "New opens paused",
+      priceBlockedBody: "The mark is not a fresh on-chain quote. Closes stay available. New opens wait.",
+      loadingQuote: "Loading quote",
+      quoteMissing: "Quote unavailable. The previous market's price is not reused",
+      refOnly: "Reference quote · on-chain settlement is SOL only",
+      deskMark: "On-chain mark",
+      samplePill: "Sample",
+      unknownTx: "Result not confirmed. The signature is kept. Nothing is sent again automatically.",
+      statusWait: "Awaiting signature",
+      statusSubmitted: "Submitted",
+      statusUnknown: "Result pending",
+      statusConfirmed: "Settled",
+      statusFailed: "Chain failed",
+      statusCancelled: "Signature cancelled",
+      withdrawCap: "Withdraw cannot exceed withdrawable cash.",
     },
   };
 
@@ -264,16 +375,22 @@
   function renderLog() {
     const el = $("tx-log");
     if (!el) return;
-    if (!log.length) {
-      el.innerHTML = "<li class='fine'>—</li>";
-      return;
-    }
-    el.innerHTML = log.map((e) => {
-      const link = e.sig
-        ? `<a href="${S().explorerTx(e.sig)}" rel="noopener" target="_blank">${short(e.sig)}</a>`
+    const attempts = attemptRows().slice().reverse();
+    const seen = {};
+    attempts.forEach((row) => { if (row.signature) seen[row.signature] = true; });
+    const extras = log.filter((entry) => !entry.sig || !seen[entry.sig]);
+    const lines = attempts.map((row) => {
+      const link = row.signature
+        ? `<a href="${S().explorerTx(row.signature)}" rel="noopener" target="_blank">${short(row.signature)}</a>`
         : "";
-      return `<li><span class="mono">${e.op || ""}</span> ${e.detail || ""} ${link}</li>`;
-    }).join("");
+      return `<li><span class="mono">${attemptLabel(row.status)}</span> ${row.op || ""} ${row.detail || ""} ${link}</li>`;
+    }).concat(extras.map((entry) => {
+      const link = entry.sig
+        ? `<a href="${S().explorerTx(entry.sig)}" rel="noopener" target="_blank">${short(entry.sig)}</a>`
+        : "";
+      return `<li><span class="mono">${entry.op || ""}</span> ${entry.detail || ""} ${link}</li>`;
+    }));
+    el.innerHTML = lines.length ? lines.join("") : "<li class='fine'>—</li>";
   }
 
   function explain(err, logs) {
@@ -358,10 +475,9 @@
       await new Promise((r) => setTimeout(r, wait));
     }
     if (!confirmed) {
-      const err = new Error(lang === "zh"
-        ? "已发送但未确认。打开 explorer 查看，再点刷新。"
-        : "Sent but not confirmed yet. Check explorer, then refresh.");
+      const err = new Error(t("unknownTx"));
       err.signature = sig;
+      err.code = "unknown";
       throw err;
     }
     // Optional meta/logs — soft-fail on 429
@@ -376,9 +492,166 @@
     }
   }
 
+  function attemptRows() {
+    try { return JSON.parse(localStorage.getItem(ATTEMPT_KEY) || "[]"); }
+    catch { return []; }
+  }
+
+  function saveAttempt(row) {
+    const rows = attemptRows().filter((item) => item.id !== row.id);
+    rows.push(row);
+    localStorage.setItem(ATTEMPT_KEY, JSON.stringify(rows.slice(-40)));
+    renderLog();
+  }
+
+  function pendingSame(op) {
+    const owner = walletAdapter && walletAdapter.publicKey ? walletAdapter.publicKey.toBase58() : "";
+    return attemptRows().find((row) => row.owner === owner && row.op === op && (row.status === "unknown" || row.status === "submitted"));
+  }
+
+  function attemptLabel(status) {
+    return {
+      "awaiting-signature": t("statusWait"),
+      submitted: t("statusSubmitted"),
+      unknown: t("statusUnknown"),
+      confirmed: t("statusConfirmed"),
+      failed: t("statusFailed"),
+      cancelled: t("statusCancelled"),
+    }[status] || status;
+  }
+
+  async function resumeAttempts() {
+    if (!connection) return;
+    const rows = attemptRows();
+    let changed = false;
+    for (const row of rows) {
+      if (!row.signature || (row.status !== "unknown" && row.status !== "submitted")) continue;
+      try {
+        const st = await connection.getSignatureStatuses([row.signature], { searchTransactionHistory: true });
+        const val = st && st.value && st.value[0];
+        if (!val) continue;
+        row.status = val.err ? "failed" : (val.confirmationStatus === "confirmed" || val.confirmationStatus === "finalized") ? "confirmed" : row.status;
+        changed = true;
+      } catch { /* keep the signature; do not send a new transaction */ }
+    }
+    if (changed) localStorage.setItem(ATTEMPT_KEY, JSON.stringify(rows.slice(-40)));
+  }
+
+  function parsePyth(data, feedHex) {
+    const offsets = [41, 42];
+    for (const feedOff of offsets) {
+      if (feedOff + 32 + 36 > data.length) continue;
+      if (data.subarray(feedOff, feedOff + 32).toString("hex") !== feedHex) continue;
+      return {
+        price: data.readBigInt64LE(feedOff + 32),
+        conf: data.readBigUInt64LE(feedOff + 40),
+        expo: data.readInt32LE(feedOff + 48),
+        publishTime: data.readBigInt64LE(feedOff + 52),
+      };
+    }
+    return null;
+  }
+
+  async function loadExternalQuote(id) {
+    const feed = FEEDS[id];
+    if (!feed) return;
+    if (!quotes[id]) quotes[id] = { status: "loading", market: id };
+    const math = S().math;
+    try {
+      const res = await fetch("https://hermes.pyth.network/v2/updates/price/latest?ids[]=" + feed, { signal: AbortSignal.timeout(7000) });
+      if (res.ok) {
+        const body = await res.json();
+        const price = body && body.parsed && body.parsed[0] && body.parsed[0].price;
+        if (price && price.price != null) {
+          const scaled = math.scaleToExpo(price.price, price.expo, -8);
+          if (scaled > 0n) {
+            quotes[id] = {
+              status: "reference",
+              market: id,
+              raw: scaled.toString(),
+              text: math.fmtPrice(scaled),
+              source: "hermes",
+            };
+            noteTick(id, Number(quotes[id].text));
+            return;
+          }
+        }
+      }
+    } catch { /* Hermes is optional */ }
+    let reason = "unread";
+    try {
+      ensureClient();
+      const Pub = S().PublicKey;
+      const shard = S().Buffer.alloc(2);
+      shard.writeUInt16LE(0, 0);
+      const [pda] = Pub.findProgramAddressSync(
+        [shard, S().Buffer.from(feed, "hex")],
+        new Pub(PYTH_PUSH)
+      );
+      const info = await S().withBackoff(() => connection.getAccountInfo(pda), 4);
+      if (!info || !info.data) reason = "no-account";
+      else {
+        const parsed = parsePyth(S().Buffer.from(info.data), feed);
+        if (!parsed || parsed.price <= 0n) reason = "no-parse";
+        else {
+          const age = BigInt(Math.floor(Date.now() / 1000)) - parsed.publishTime;
+          const scaled = math.scaleToExpo(parsed.price, parsed.expo, -8);
+          if (scaled > 0n && age <= 180n && age >= -5n) {
+            quotes[id] = {
+              status: "reference",
+              market: id,
+              raw: scaled.toString(),
+              text: math.fmtPrice(scaled),
+              source: "pyth",
+            };
+            noteTick(id, Number(quotes[id].text));
+            return;
+          }
+          reason = "stale " + age.toString();
+        }
+      }
+    } catch (err) {
+      reason = (err && err.message) ? err.message : String(err);
+    }
+    if (!quotes[id] || quotes[id].status === "loading" || quotes[id].status === "unavailable") {
+      quotes[id] = { status: "unavailable", market: id, reason: reason.slice(0, 160) };
+    }
+  }
+
+  function displayQuote() {
+    if (market === "SOL/USD") {
+      if (!snap || !snap.price) return { status: "unavailable", market };
+      return {
+        status: snap.price.source === "pyth" ? "execution" : "fixture",
+        market,
+        text: snap.price.text,
+        raw: snap.price.raw,
+        source: snap.price.source,
+      };
+    }
+    return quotes[market] || { status: "loading", market };
+  }
+
   async function prepareAndSend(buildFn, meta) {
     ensureClient();
     const owner = walletAdapter.publicKey;
+    const blocked = pendingSame(meta.op);
+    if (blocked && blocked.signature) {
+      const err = new Error(t("unknownTx") + " " + blocked.signature);
+      err.code = "unknown";
+      err.signature = blocked.signature;
+      throw err;
+    }
+    const row = {
+      id: String(Date.now()) + "-" + Math.random().toString(16).slice(2, 8),
+      op: meta.op,
+      detail: meta.detail || "",
+      owner: owner.toBase58(),
+      status: "awaiting-signature",
+      signature: "",
+      at: Date.now(),
+    };
+    saveAttempt(row);
     let built = null;
     for (let i = 0; i < 6; i++) {
       try {
@@ -391,16 +664,52 @@
     }
     if (!built || !built.prepared) throw new Error("prepare returned nothing");
     const tx = S().Transaction.from(S().bytesFromBase64(built.prepared));
-    const signed = await walletAdapter.signTransaction(tx);
+    let signed;
+    try {
+      signed = await walletAdapter.signTransaction(tx);
+    } catch (err) {
+      row.status = "cancelled";
+      saveAttempt(row);
+      throw err;
+    }
     const raw = signed.serialize();
     const sig = await S().withBackoff(() =>
       connection.sendRawTransaction(raw, { skipPreflight: false, preflightCommitment: "confirmed" })
     , 6);
-    const landed = await pollConfirmed(sig);
+    row.status = "submitted";
+    row.signature = sig;
+    saveAttempt(row);
+    let landed;
+    try {
+      landed = await pollConfirmed(sig);
+    } catch (err) {
+      row.status = err.code === "unknown" ? "unknown" : "failed";
+      row.signature = err.signature || sig;
+      saveAttempt(row);
+      throw err;
+    }
+    row.status = "confirmed";
     const logs = (landed && landed.meta && landed.meta.logMessages) || [];
     const events = S().eventsFromLogs(logs);
-    pushLog({ op: meta.op, detail: meta.detail || "", sig });
+    const receipt = receiptLine(events);
+    if (receipt) row.detail = receipt;
+    saveAttempt(row);
     return { ok: true, sig, logs, events };
+  }
+
+  function receiptLine(events) {
+    const settle = (events || []).find((ev) => ev.name === "settle");
+    if (!settle) return "";
+    const f = settle.fields || {};
+    const status = f.status === "2" ? t("liquidated") : t("closed");
+    const realized = f.realized != null ? f.realized : f.pnl;
+    const bits = [status];
+    if (f.mark != null) bits.push((lang === "zh" ? "标记 " : "mark ") + f.mark);
+    if (realized != null) bits.push((lang === "zh" ? "实际 " : "realized ") + realized);
+    if (f.paid && f.paid !== "0") bits.push((lang === "zh" ? "到账 " : "paid ") + f.paid);
+    if (f.queued && f.queued !== "0") bits.push((lang === "zh" ? "待兑付 " : "queued ") + f.queued);
+    if (f.status === "2") bits.push(t("realizedAll"));
+    return bits.join(" · ");
   }
 
   async function loadState() {
@@ -436,21 +745,27 @@
         sol = (lamports / 1e9).toFixed(3);
       } catch { sol = "—"; }
     }
-    const positions = (raw.positions || [])
-      .filter((p) => !focusKey || p.owner === focusKey)
+    const positions = (focusKey ? (raw.positions || []) : [])
+      .filter((p) => p.owner === focusKey)
       .map((p) => {
         const mark = price ? BigInt(price.raw) : 0n;
         const upnl = p.status === 0 && price ? math.calcPnl(p.side, p.entryPrice, mark, p.notional) : p.pnl;
+        const markPnl = p.status === 0 ? upnl : p.pnl;
+        const realized = p.status === 2 ? -p.margin : p.status === 0 ? upnl : p.pnl;
         return {
           id: p.id.toString(),
           side: p.side === 0 ? "long" : "short",
           status: p.status === 0 ? "open" : p.status === 2 ? "liquidated" : "closed",
           leverage: p.leverage,
           margin: math.fmtMicro(p.margin),
+          marginMicro: p.margin,
           notional: math.fmtMicro(p.notional),
           entry: math.fmtPrice(p.entryPrice),
           liq: math.fmtPrice(p.liqPrice),
           upnl: upnl == null ? "0" : math.fmtMicro(upnl),
+          upnlMicro: upnl || 0n,
+          markPnl: markPnl == null ? "0" : math.fmtMicro(markPnl),
+          realized: realized == null ? "0" : math.fmtMicro(realized),
           mine: focusKey && p.owner === focusKey,
           open: p.status === 0,
         };
@@ -480,14 +795,25 @@
             hasWallet,
             sol,
             scar: user ? math.fmtMicro(user.scar) : "0",
+            staked: user ? math.fmtMicro(user.staked) : "0",
+            scarFree: user ? math.fmtMicro(user.scar > user.staked ? user.scar - user.staked : 0n) : "0",
+            claimable: user ? math.fmtMicro(user.claimable) : "0",
+            hasSession: !!(user && user.hasSession),
+            session: user ? user.session : "",
           }
         : null,
       positions,
       addresses: raw.addresses,
     };
-    if (price && price.text) noteTick(Number(price.text));
+    if (price && price.text) noteTick("SOL/USD", Number(price.text));
     render();
     return snap;
+  }
+
+  function quoteText(q) {
+    const hero = Number(q && q.text);
+    if (!Number.isFinite(hero)) return "—";
+    return hero.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   function renderQuote() {
@@ -495,61 +821,95 @@
     const src = $("src");
     const delta = $("delta");
     const note = $("px-note");
-    if (!snap || !snap.price) {
-      px.textContent = "—";
+    const q = displayQuote();
+    const missing = !q || q.status === "unavailable" || q.status === "loading" || q.raw == null;
+    if (missing) {
+      px.textContent = q && q.status === "loading" ? "…" : "—";
       px.className = "q-px";
-      src.textContent = "no price";
+      px.title = "";
+      src.textContent = q && q.status === "loading" ? t("loadingQuote") : (q && q.reason ? t("quoteMissing") : t("quoteMissing"));
+      if (px) px.title = (q && q.reason) || "";
       src.className = "pill";
       delta.textContent = "—";
-      note.textContent = lang === "zh" ? "无可用标记价。" : "No usable mark.";
+      if (note) {
+        note.hidden = false;
+        note.textContent = t("quoteMissing");
+      }
+      const marketNote = $("market-note");
+      if (marketNote) marketNote.textContent = market === "SOL/USD" ? t("priceBlockedBody") : t("refOnly");
       return;
     }
-    const raw = BigInt(snap.price.raw);
-    const hero = Number(snap.price.text);
-    px.textContent = Number.isFinite(hero)
-      ? hero.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-      : snap.price.text;
-    px.title = snap.price.text;
-    const provisional = snap.price.source === "fixture";
-    src.textContent = provisional
-      ? (lang === "zh" ? "fixture · 暂定" : "fixture · provisional")
-      : (snap.price.source === "pyth" ? t("pythNote") : snap.price.source);
-    src.className = "pill " + snap.price.source;
-    if (lastPx !== null && raw !== lastPx) {
-      lastDir = raw > lastPx ? 1 : -1;
-      const diff = raw - lastPx;
+    const raw = BigInt(q.raw);
+    px.textContent = quoteText(q);
+    px.title = q.text || "";
+    const reference = market !== "SOL/USD";
+    const fixture = q.source === "fixture" || q.status === "fixture";
+    src.textContent = reference ? t("refOnly") : fixture ? (lang === "zh" ? "fixture · 暂定" : "fixture · provisional") : t("deskMark");
+    src.className = "pill" + (fixture ? " fixture" : "");
+    const prev = lastPxBy[market];
+    if (prev != null && raw !== prev) {
+      lastDirBy[market] = raw > prev ? 1 : -1;
+      const diff = raw - prev;
       delta.textContent = (diff > 0n ? "+" : "") + S().math.fmtPrice(diff);
-    } else if (lastPx === null) {
+    } else if (prev == null) {
       delta.textContent = t("flatNote");
     }
-    lastPx = raw;
-    const dir = lastDir === 1 ? "up" : lastDir === -1 ? "dn" : "";
+    lastPxBy[market] = raw;
+    const dir = lastDirBy[market] === 1 ? "up" : lastDirBy[market] === -1 ? "dn" : "";
     px.className = dir ? "q-px " + dir : "q-px";
     if (dir) delta.className = "delta " + dir;
     if (note) {
-      note.textContent = snap.price.source === "pyth"
-        ? (lang === "zh" ? "Devnet 上的 Pyth 账户写入 desk，不是 Hermes 直连。" : "Desk oracle from a sponsored Pyth account. Not a Hermes stream.")
-        : (lang === "zh" ? "fixture 暂定标记。" : "Fixture mark.");
+      note.hidden = false;
+      note.textContent = reference
+        ? t("refOnly")
+        : fixture
+          ? (lang === "zh" ? "fixture 暂定标记。新开仓先停，平仓仍可用。" : "Fixture mark. New opens stay paused. Closes stay available.")
+          : (lang === "zh" ? "管理员抄写的链上标记，不是 Pyth 直连。本页不称它为 LIVE。" : "Admin-copied on-chain mark, not a direct Pyth stream. This page does not call it LIVE.");
     }
+    const marketNote = $("market-note");
+    if (marketNote) {
+      marketNote.textContent = reference ? t("notTradable") + " · " + t("refOnly") : fixture ? t("priceBlockedBody") : "";
+    }
+  }
+
+  function setText(id, text) {
+    const el = $(id);
+    if (el) el.textContent = text;
   }
 
   function renderAccount() {
     const a = snap && snap.actor;
+    const dash = "—";
     if (!a) {
-      $("bal").textContent = "—";
-      $("queued").textContent = "—";
-      $("opens").textContent = "—";
-      $("wallet-dusd").textContent = "—";
-      $("who").textContent = lang === "zh" ? "连接后显示地址。" : "Address shows after you connect.";
+      ["bal", "queued", "wallet-dusd", "locked", "upnl", "scar-line", "scar-free", "scar-staked", "scar-claim"].forEach((id) => setText(id, dash));
+      setText("who", lang === "zh" ? "连接后显示地址。" : "Address shows after you connect.");
+      setText("session-state", t("sessionNone"));
       return;
     }
-    $("bal").textContent = a.missing ? "—" : a.balance + " dUSD";
-    $("queued").textContent = a.missing ? "—" : a.queued + " dUSD";
-    $("opens").textContent = a.missing ? "—" : String(a.openCount);
-    $("wallet-dusd").textContent = a.walletDusd + " dUSD";
-    $("who").textContent = (a.missing
+    const open = ((snap && snap.positions) || []).filter((p) => p.open);
+    let locked = 0n;
+    let upnl = 0n;
+    open.forEach((p) => {
+      locked += BigInt(p.marginMicro || 0);
+      upnl += BigInt(p.upnlMicro || 0);
+    });
+    const math = S().math;
+    const upText = (upnl > 0n ? "+" : "") + math.fmtMicro(upnl);
+    setText("wallet-dusd", a.walletDusd + " dUSD");
+    setText("bal", a.missing ? dash : a.balance + " dUSD");
+    setText("locked", a.missing ? dash : math.fmtMicro(locked) + " dUSD");
+    setText("upnl", a.missing ? dash : upText + " dUSD");
+    setText("queued", a.missing ? dash : a.queued + " dUSD");
+    setText("scar-line", a.missing ? dash : a.scar + " SCAR · " + a.claimable + " dUSD");
+    setText("scar-free", a.missing ? dash : a.scarFree + " SCAR");
+    setText("scar-staked", a.missing ? dash : a.staked + " SCAR");
+    setText("scar-claim", a.missing ? dash : a.claimable + " dUSD");
+    setText("who", (a.missing
       ? (lang === "zh" ? "这个钱包还没在 desk 上。" : "Not on the desk yet.")
-      : short(a.pubkey)) + " · " + a.sol + " SOL";
+      : short(a.pubkey)) + " · " + a.sol + " SOL");
+    setText("session-state", a.hasSession
+      ? t("sessionOn") + " " + short(a.session)
+      : t("sessionNone"));
     const pill = $("sol-pill");
     if (pill) pill.textContent = a.sol + " SOL";
   }
@@ -562,6 +922,7 @@
     const body = $("pos-body");
     const rows = (snap && snap.positions) || [];
     const open = rows.filter((p) => p.open);
+    renderHistory(rows);
     if (!open.length) {
       body.innerHTML = `<tr class="empty"><td colspan="7" class="fine">${t("noPos")}</td></tr>`;
       return;
@@ -584,6 +945,28 @@
     body.querySelectorAll("[data-close]").forEach((btn) => {
       btn.addEventListener("click", () => closePos([btn.getAttribute("data-close")]));
     });
+  }
+
+  function renderHistory(rows) {
+    const body = $("hist-body");
+    if (!body) return;
+    const done = (rows || []).filter((p) => !p.open);
+    if (!done.length) {
+      body.innerHTML = `<tr class="empty"><td colspan="5" class="fine">${t("noHist")}</td></tr>`;
+      return;
+    }
+    body.innerHTML = done.map((p) => {
+      const label = p.status === "liquidated" ? t("liquidated") : t("closed");
+      const realized = p.status === "liquidated" ? p.realized + " · " + t("realizedAll") : p.realized;
+      return `
+      <tr>
+        <td data-label="${t("thStatus")}">${label}</td>
+        <td data-label="${t("thSide")}">${sideWord(p.side)}</td>
+        <td data-label="${t("thMargin")}">${p.margin}</td>
+        <td data-label="${t("thPnl")}">${p.markPnl}</td>
+        <td data-label="${t("thRealized")}">${realized}</td>
+      </tr>`;
+    }).join("");
   }
 
   function solOf(actor) {
@@ -647,7 +1030,10 @@
     const math = S().math;
     const lev = Number($("lev").value);
     const marginText = ($("margin").value || "").trim();
-    const mark = snap && snap.price ? BigInt(snap.price.raw) : null;
+    const shown = displayQuote();
+    const mark = shown && shown.raw != null && shown.status !== "loading" && shown.status !== "unavailable"
+      ? BigInt(shown.raw)
+      : null;
     const liqBps = (snap && snap.desk && snap.desk.liqFractionBps) || 5000;
     const maxLev = (snap && snap.desk && snap.desk.maxLeverage) || 1001;
     document.querySelectorAll(".lev-chips button").forEach((btn) => {
@@ -686,6 +1072,13 @@
     drawChart();
   }
 
+  function openBlock() {
+    if (market !== "SOL/USD") return "market";
+    const q = displayQuote();
+    if (!q || q.source !== "pyth" || q.status !== "execution") return "price";
+    return "";
+  }
+
   function renderGo() {
     const btn = $("btn-open");
     const reason = $("go-reason");
@@ -705,24 +1098,30 @@
     }[ph] || ["goLong", "reasonConnect"];
     btn.textContent = t(copy[0]);
     if (reason) reason.textContent = t(ph === "connect" ? "reasonConnect" : copy[1]);
-    const fundRow = $("fund-row");
-    if (fundRow) {
-      const queued = snap && snap.actor ? Number(snap.actor.queued || 0) : 0;
-      fundRow.hidden = !(queued > 0);
+    const blocked = openBlock();
+    openLocked = ph === "open" && !!blocked;
+    if (openLocked) {
+      btn.textContent = blocked === "market" ? t("notTradable") : t("priceBlocked");
+      if (reason) reason.textContent = blocked === "market" ? t("refOnly") : t("priceBlockedBody");
     }
     const eyebrow = $("market-eyebrow");
-    if (eyebrow) eyebrow.textContent = t("eyebrow");
+    if (eyebrow) eyebrow.textContent = market + " · Devnet";
     const ticketMarket = $("ticket-market");
-    if (ticketMarket) ticketMarket.textContent = t("ticketChain");
+    if (ticketMarket) {
+      ticketMarket.textContent = market === "SOL/USD" ? t("ticketChain") : market + " · " + t("refOnly");
+    }
+    const posMarket = $("pos-market");
+    if (posMarket) posMarket.textContent = "SOL/USD";
   }
 
-  function noteTick(price) {
+  function noteTick(marketId, price) {
     if (!Number.isFinite(price) || price <= 0) return;
+    const bucket = ticksByMarket[marketId] || (ticksByMarket[marketId] = []);
     const now = Date.now();
-    const last = ticks[ticks.length - 1];
+    const last = bucket[bucket.length - 1];
     if (last && now - last.t < 15000 && last.c === price) return;
-    ticks.push({ t: now, c: price });
-    if (ticks.length > 240) ticks.shift();
+    bucket.push({ t: now, c: price });
+    if (bucket.length > 240) bucket.shift();
   }
 
   function drawChart() {
@@ -740,7 +1139,7 @@
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, w, h);
-    const series = ticks;
+    const series = ticksByMarket[market] || [];
     if (empty) {
       empty.hidden = series.length > 0;
       if (!series.length) empty.textContent = snap && snap.price ? t("chartWait") : t("chartEmpty");
@@ -841,6 +1240,15 @@
     renderGo();
     renderSteps();
     updateNext();
+    const chartPill = $("chart-pill");
+    if (chartPill) {
+      chartPill.textContent = t("samplePill");
+      chartPill.classList.remove("live");
+    }
+    const chartMarket = $("chart-market");
+    if (chartMarket) chartMarket.textContent = market;
+    const chartNote = $("chart-note");
+    if (chartNote) chartNote.textContent = market === "SOL/USD" ? t("chartNote") : t("chartNoteRef");
     const on = !!(walletAdapter && walletAdapter.publicKey);
     $("btn-disconnect").hidden = !on;
     ["btn-phantom", "btn-solflare", "btn-burner"].forEach((id) => {
@@ -852,8 +1260,7 @@
     } else {
       setLink("idle", t("idle"));
     }
-    if ($("btn-open")) $("btn-open").disabled = !!busy;
-    if ($("market-note")) $("market-note").textContent = "";
+    if ($("btn-open")) $("btn-open").disabled = !!busy || openLocked;
     const pill = $("sol-pill");
     if (pill && !(snap && snap.actor)) pill.textContent = "— SOL";
   }
@@ -969,8 +1376,12 @@
       toast(lang === "zh" ? "请先连接钱包。" : "Connect a wallet first.", "bad");
       return null;
     }
-    if (market !== "SOL/USD" && (op === "open" || op === "close")) {
-      toast(t("notOnChain"), "bad");
+    if (op === "open" && openBlock() === "market") {
+      toast(t("notTradable"), "bad");
+      return null;
+    }
+    if (op === "open" && openBlock() === "price") {
+      toast(t("priceBlockedBody"), "bad");
       return null;
     }
     const owner = walletAdapter.publicKey;
@@ -990,10 +1401,15 @@
             side: extra.side,
             margin: extra.margin,
             leverage: Number(extra.leverage),
-            fundFrom: extra.fundFrom || "balance",
+            fundFrom: "balance",
           });
         }
         if (op === "close") return client.close({ signer: handle, owner, positionIds: extra.positionIds });
+        if (op === "stake") return client.stake(handle, owner, extra.amount, false);
+        if (op === "unstake") return client.stake(handle, owner, extra.amount, true);
+        if (op === "claim") return client.claim(handle, owner);
+        if (op === "set-session") return client.setSession(handle, extra.session);
+        if (op === "clear-session") return client.clearSession(handle);
         throw new Error("unknown op " + op);
       }, { op, detail: extra && extra.detail ? extra.detail : "" });
       toast((lang === "zh" ? "已上链 " : "Landed ") + result.sig.slice(0, 12), "ok");
@@ -1050,9 +1466,16 @@
       await runOp("deposit", { amount, detail: amount + " dUSD" });
       return;
     }
+    if (openBlock() === "market") {
+      toast(t("notTradable"), "bad");
+      return;
+    }
+    if (openBlock() === "price") {
+      toast(t("priceBlockedBody"), "bad");
+      return;
+    }
     const margin = ($("margin").value || "").trim();
     const leverage = Number($("lev").value);
-    const fundFrom = ($("fund") && $("fund").value) || "balance";
     const maxLev = (snap && snap.desk && snap.desk.maxLeverage) || 1001;
     if (!/^\d+(\.\d+)?$/.test(margin) || Number(margin) <= 0) {
       toast(lang === "zh" ? "保证金须大于 0。" : "Margin must be greater than 0.", "bad");
@@ -1063,17 +1486,50 @@
       return;
     }
     const bal = snap && snap.actor ? Number(snap.actor.balance || 0) : 0;
-    if (fundFrom === "balance" && Number(margin) > bal + 1e-9) {
-      toast(lang === "zh" ? "Desk 余额不够这笔保证金。先入金，或把保证金调小。" : "Desk balance is below this margin. Deposit, or lower it.", "bad");
+    if (Number(margin) > bal + 1e-9) {
+      toast(lang === "zh" ? "可提现余额不够这笔保证金。先入金，或把保证金调小。" : "Withdrawable cash is below this margin. Deposit, or lower it.", "bad");
       return;
     }
     await runOp("open", {
       side,
       margin,
       leverage,
-      fundFrom,
-      detail: side + " " + margin + " @" + leverage + "x",
+      fundFrom: "balance",
+      detail: side + " " + margin + " @" + leverage + "x cash",
     });
+  }
+
+  function scarAmount() {
+    const amount = (($("scar-amt") && $("scar-amt").value) || "").trim();
+    if (!/^\d+(\.\d+)?$/.test(amount) || Number(amount) <= 0) {
+      toast(lang === "zh" ? "SCAR 金额须大于 0。" : "SCAR amount must be greater than 0.", "bad");
+      return null;
+    }
+    return amount;
+  }
+
+  async function armSession() {
+    const actor = snap && snap.actor;
+    if (actor && actor.hasSession) {
+      toast(t("sessionOn") + " " + short(actor.session), "ok");
+      return;
+    }
+    let rec = null;
+    try { rec = JSON.parse(localStorage.getItem(SESSION_KEY) || "null"); } catch { rec = null; }
+    if (!rec || !rec.publicKey) {
+      const kp = S().Keypair.generate();
+      rec = { publicKey: kp.publicKey.toBase58(), secret: Array.from(kp.secretKey) };
+      localStorage.setItem(SESSION_KEY, JSON.stringify(rec));
+    }
+    const result = await runOp("set-session", { session: rec.publicKey, detail: short(rec.publicKey) });
+    if (result && result.ok === false) return;
+  }
+
+  async function clearSessionKey() {
+    const result = await runOp("clear-session", { detail: "clear session" });
+    if (result && result.ok !== false) {
+      try { localStorage.removeItem(SESSION_KEY); } catch { /* keep the chain result */ }
+    }
   }
 
   function wire() {
@@ -1110,8 +1566,31 @@
         toast(lang === "zh" ? "金额须为数字。" : "Amount must be a number.", "bad");
         return;
       }
+      const bal = snap && snap.actor ? Number(snap.actor.balance || 0) : 0;
+      if (Number(amount) > bal + 1e-9) {
+        toast(t("withdrawCap"), "bad");
+        return;
+      }
       await runOp("withdraw", { amount, detail: "withdraw " + amount });
     });
+    const stakeBtn = $("btn-stake");
+    const unstakeBtn = $("btn-unstake");
+    const claimBtn = $("btn-claim");
+    if (stakeBtn) stakeBtn.addEventListener("click", async () => {
+      const amount = scarAmount();
+      if (!amount) return;
+      await runOp("stake", { amount, detail: "stake " + amount });
+    });
+    if (unstakeBtn) unstakeBtn.addEventListener("click", async () => {
+      const amount = scarAmount();
+      if (!amount) return;
+      await runOp("unstake", { amount, detail: "unstake " + amount });
+    });
+    if (claimBtn) claimBtn.addEventListener("click", () => runOp("claim", { detail: "claim" }));
+    const armBtn = $("btn-session-arm");
+    const clearBtn = $("btn-session-clear");
+    if (armBtn) armBtn.addEventListener("click", () => armSession());
+    if (clearBtn) clearBtn.addEventListener("click", () => clearSessionKey());
     $("side-long").addEventListener("click", () => {
       side = "long";
       $("side-long").classList.add("on");
@@ -1159,8 +1638,9 @@
           b.classList.toggle("on", on);
           b.setAttribute("aria-selected", on ? "true" : "false");
         });
-        $("market-eyebrow").textContent = market + (lang === "zh" ? " 交易台" : " desk");
-        $("ticket-market").textContent = market + " · isolated";
+        if (market !== "SOL/USD" && (!quotes[market] || quotes[market].status === "unavailable")) {
+          loadExternalQuote(market).then(() => render());
+        }
         render();
       });
     });
@@ -1172,18 +1652,29 @@
     wire();
     setBusy(true);
     try {
-      await loadState();
+      await Promise.all([
+        loadState(),
+        loadExternalQuote("BTC/USD"),
+        loadExternalQuote("ETH/USD"),
+        resumeAttempts(),
+      ]);
     } catch (err) {
       toast(explain(err), "bad");
       setLink("error", explain(err));
     } finally {
       setBusy(false);
       render();
+      renderLog();
       requestAnimationFrame(() => drawChart());
     }
     setInterval(async () => {
       if (busy) return;
-      try { await loadState(); } catch { /* soft */ }
+      try {
+        await loadState();
+        await loadExternalQuote("BTC/USD");
+        await loadExternalQuote("ETH/USD");
+        if (market !== "SOL/USD") render();
+      } catch { /* soft */ }
     }, 20000);
   }
 

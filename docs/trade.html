@@ -23,6 +23,11 @@
       <div>
         <p class="eyebrow" id="market-eyebrow">SOL/USD · Devnet</p>
         <h1>Scardesk</h1>
+        <nav class="markets" aria-label="Market">
+          <button type="button" class="on" data-market="SOL/USD" aria-selected="true">SOL</button>
+          <button type="button" data-market="BTC/USD" aria-selected="false">BTC</button>
+          <button type="button" data-market="ETH/USD" aria-selected="false">ETH</button>
+        </nav>
       </div>
     </div>
     <div class="quote">
@@ -66,8 +71,8 @@
       <header class="ph chart-ph">
         <div class="chart-title">
           <h2 id="chart-h" data-i18n="chart">走势</h2>
-          <span class="pill live">LIVE</span>
-          <span class="pill">SOL/USD</span>
+          <span class="pill" id="chart-pill">采样</span>
+          <span class="pill" id="chart-market">SOL/USD</span>
         </div>
         <p class="fine" id="chart-meta"></p>
       </header>
@@ -123,14 +128,7 @@
         <button type="button" data-lev="1001" class="hot">1001×</button>
       </div>
 
-      <div class="row" id="fund-row" hidden>
-        <label><span data-i18n="fundFrom">资金来源</span>
-          <select id="fund">
-            <option value="balance" data-i18n="fromBal">余额</option>
-            <option value="queued" data-i18n="fromQ">排队债权</option>
-          </select>
-        </label>
-      </div>
+      <p class="fine" id="fund-note" data-i18n="cashOnly">资金来源：现金保证金。债权开仓未开放。</p>
 
       <div class="quote-preview" id="quote-preview">
         <div><span data-i18n="notional">名义价值</span><strong id="prev-notional">—</strong></div>
@@ -148,7 +146,7 @@
     <section class="panel" id="positions" aria-labelledby="pos-h">
       <header class="ph">
         <h2 id="pos-h" data-i18n="positions">持仓</h2>
-        <span class="pill">SOL/USD</span>
+        <span class="pill" id="pos-market">SOL/USD</span>
       </header>
       <div class="scroll">
         <table class="pos">
@@ -177,10 +175,12 @@
       </header>
       <div class="account-layout">
         <dl class="stats">
-          <div><dt data-i18n="balance">Desk 余额</dt><dd id="bal">—</dd></div>
-          <div><dt data-i18n="walletHold">钱包 dUSD</dt><dd id="wallet-dusd">—</dd></div>
-          <div><dt data-i18n="queued">排队中</dt><dd id="queued">—</dd></div>
-          <div><dt data-i18n="opens">持仓数</dt><dd id="opens">—</dd></div>
+          <div><dt data-i18n="walletHold">钱包 dUSD</dt><dd id="wallet-dusd">—</dd><span class="hint" data-i18n="hintWallet">在钱包里，还没存进交易账户</span></div>
+          <div><dt data-i18n="balance">可提现余额</dt><dd id="bal">—</dd><span class="hint" data-i18n="hintCash">已入金、未锁定。出金只取这一项</span></div>
+          <div><dt data-i18n="locked">持仓保证金</dt><dd id="locked">—</dd><span class="hint" data-i18n="hintLocked">锁在未平仓里，不能提出</span></div>
+          <div><dt data-i18n="upnl">未实现盈亏</dt><dd id="upnl">—</dd><span class="hint" data-i18n="hintUpnl">按标记价估算，不是现金</span></div>
+          <div><dt data-i18n="queued">待兑付利润</dt><dd id="queued">—</dd><span class="hint" data-i18n="hintQueued">债权。没有到账期限，不能当余额</span></div>
+          <div><dt data-i18n="scarLine">SCAR / 奖励</dt><dd id="scar-line">—</dd><span class="hint" data-i18n="hintScar">SCAR 不折成美元。奖励领取后才进可提现余额</span></div>
         </dl>
         <div class="account-actions">
           <p class="fine" id="who">—</p>
@@ -200,6 +200,63 @@
       </div>
     </section>
 
+    <section class="panel" id="history" aria-labelledby="hist-h">
+      <header class="ph">
+        <h2 id="hist-h" data-i18n="history">已结束</h2>
+        <span class="pill" data-i18n="histNote">平仓与清算分开</span>
+      </header>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="thStatus">结果</th>
+              <th data-i18n="thSide">方向</th>
+              <th data-i18n="thMargin">保证金</th>
+              <th data-i18n="thPnl">标记盈亏</th>
+              <th data-i18n="thRealized">实际结果</th>
+            </tr>
+          </thead>
+          <tbody id="hist-body">
+            <tr class="empty"><td colspan="5" class="fine">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="scar" aria-labelledby="scar-h">
+      <header class="ph">
+        <h2 id="scar-h">SCAR</h2>
+        <span class="pill" data-i18n="scarTest">机制测试</span>
+      </header>
+      <p class="fine" data-i18n="scarBody">亏损会铸造 SCAR。对向仓刷奖励的路径还没关掉，所以这里不标价、不显示年化，也不把 SCAR 说成可兑付收益。</p>
+      <dl class="stats">
+        <div><dt data-i18n="scarFree">可用</dt><dd id="scar-free">—</dd></div>
+        <div><dt data-i18n="scarStaked">已质押</dt><dd id="scar-staked">—</dd></div>
+        <div><dt data-i18n="scarClaim">可领取 dUSD</dt><dd id="scar-claim">—</dd></div>
+      </dl>
+      <div class="row">
+        <label><span data-i18n="amount">金额</span>
+          <input id="scar-amt" inputmode="decimal" value="1" autocomplete="off">
+        </label>
+        <button type="button" id="btn-stake" class="ghost" data-i18n="stake">质押</button>
+        <button type="button" id="btn-unstake" class="ghost" data-i18n="unstake">解除</button>
+        <button type="button" id="btn-claim" class="ghost" data-i18n="claim">领取奖励</button>
+      </div>
+    </section>
+
+    <section class="panel" id="session" aria-labelledby="session-h">
+      <header class="ph">
+        <h2 id="session-h" data-i18n="session">会话</h2>
+        <span class="pill" data-i18n="sessionOff">不自动交易</span>
+      </header>
+      <p class="fine" data-i18n="sessionBody">可以登记一个会话公钥：它能开仓和平仓，不能出金、质押或领取。链上还没有保证金预算、市场、杠杆和期限的硬限制，所以本页不会替你自动下单。</p>
+      <p class="fine" id="session-state">—</p>
+      <div class="row">
+        <button type="button" id="btn-session-arm" class="ghost" data-i18n="sessionArm">登记会话</button>
+        <button type="button" id="btn-session-clear" class="ghost" data-i18n="sessionClear">撤销会话</button>
+      </div>
+    </section>
+
     <section class="panel" id="log-panel" aria-labelledby="log-h">
       <header class="ph">
         <h2 id="log-h" data-i18n="tx">成交</h2>
@@ -213,7 +270,7 @@
     <p data-i18n="footer">Scardesk · Devnet 演示 · 真实签名 · 非主网资金 · 与 papertrade.xyz 无关</p>
   </footer>
 
-  <script src="scardesk-client.js"></script>
-  <script src="trade-app.js"></script>
+  <script src="scardesk-client.js?v=20261013b"></script>
+  <script src="trade-app.js?v=20261013b"></script>
 </body>
 </html>

@@ -22847,6 +22847,17 @@ Message: ${transactionMessage}.
         const free = bi(desk.lpCash) - bi(desk.reservedFees);
         return free > 0n ? free : 0n;
       }
+      function scaleToExpo(value, expo, target) {
+        const v = bi(value);
+        const e = Number(expo);
+        const t = Number(target);
+        if (!Number.isInteger(e) || !Number.isInteger(t)) throw new Error("bad expo");
+        if (e < -18 || e > 18 || t < -18 || t > 18) throw new Error("expo out of range");
+        const diff = e - t;
+        if (diff === 0) return v;
+        if (diff > 0) return v * 10n ** BigInt(diff);
+        return v / 10n ** BigInt(-diff);
+      }
       function planSettle(position, price, desk) {
         const raw = calcPnl(position.side, position.entryPrice, price, position.notional);
         const liq = isLiquidatable(position.side, price, position.liqPrice);
@@ -22873,16 +22884,188 @@ Message: ${transactionMessage}.
         }
         return { raw, liq, loss, payCash, kinds };
       }
+      function priceFresh(price, expo, published, now, maxAge) {
+        const stamp = bi(published);
+        const age = bi(now) - stamp;
+        return bi(price) > 0n && Number(expo) === -8 && stamp > 0n && stamp <= bi(now) + 5n && age >= 0n && age <= bi(maxAge);
+      }
       function resolvePrice(desk, oracle, nowSec) {
         const now = bi(nowSec);
-        const published = bi(oracle.publishTime);
-        const age = now - published;
-        const fresh = bi(oracle.price) > 0n && oracle.expo === -8 && published > 0n && published <= now + 5n && age >= 0n && age <= bi(desk.oracleMaxAge);
-        if (fresh) return { price: bi(oracle.price), source: "pyth" };
-        if (bi(desk.fixturePrice) > 0n && desk.fixtureExpo === -8) {
-          return { price: bi(desk.fixturePrice), source: "fixture" };
+        if (priceFresh(oracle.price, oracle.expo, oracle.publishTime, now, desk.oracleMaxAge)) {
+          return { price: bi(oracle.price), source: "pyth", fresh: true };
+        }
+        if (priceFresh(desk.fixturePrice, desk.fixtureExpo, desk.fixtureTime, now, desk.oracleMaxAge)) {
+          return { price: bi(desk.fixturePrice), source: "fixture", fresh: true };
         }
         throw new Error("no usable price");
+      }
+      function planBatch(positions, price, desk, queue) {
+        let lpCash = bi(desk.lpCash);
+        let reserved = bi(desk.reservedFees);
+        let pending = bi(desk.pendingFees || 0);
+        let head = bi(desk.queueHead);
+        let tail = bi(desk.queueTail);
+        let queueLen = bi(desk.queueLen);
+        const haircut = bi(desk.haircutBps);
+        const emission = bi(desk.emission || 0);
+        const nodes = /* @__PURE__ */ new Map();
+        for (const n of queue || []) {
+          const index = bi(n.index);
+          nodes.set(index.toString(), {
+            index,
+            owner: n.owner,
+            remaining: bi(n.remaining),
+            pubkey: n.pubkey || null,
+            isNew: false
+          });
+        }
+        const payPairs = [];
+        let payIdx = 0;
+        const newNodes = [];
+        const receipts = [];
+        function free() {
+          const f2 = lpCash - reserved;
+          return f2 > 0n ? f2 : 0n;
+        }
+        function enqueue(owner, amount, kind, positionId) {
+          if (amount <= 0n) return;
+          const index = tail;
+          const node = {
+            index,
+            owner,
+            remaining: amount,
+            pubkey: null,
+            isNew: true,
+            kind,
+            positionId
+          };
+          nodes.set(index.toString(), node);
+          newNodes.push({ index, kind, positionId, owner, amount });
+          tail += 1n;
+          queueLen += 1n;
+        }
+        function payQueue(cash) {
+          if (cash === 0n || queueLen === 0n) return cash;
+          let expect = head;
+          let guard = 0;
+          while (cash > 0n && queueLen > 0n) {
+            if (guard++ > 1e5) throw new Error("queue walk");
+            if (payIdx >= payPairs.length) {
+              const node2 = nodes.get(expect.toString());
+              if (!node2) throw new Error("missing queue node " + expect.toString());
+              payPairs.push(node2);
+            }
+            const node = payPairs[payIdx];
+            if (node.index !== expect) throw new Error("queue cursor mismatch");
+            payIdx += 1;
+            if (node.remaining === 0n) {
+              expect += 1n;
+              head = expect;
+              continue;
+            }
+            const pay = cash < node.remaining ? cash : node.remaining;
+            node.remaining -= pay;
+            cash -= pay;
+            if (node.remaining === 0n) {
+              queueLen -= 1n;
+              expect += 1n;
+              head = expect;
+            } else {
+              payIdx -= 1;
+              break;
+            }
+          }
+          if (cash > 0n && queueLen > 0n) throw new Error("queue accounts required");
+          return cash;
+        }
+        for (const pos of positions) {
+          const raw = calcPnl(pos.side, pos.entryPrice, price, pos.notional);
+          if (raw == null) throw new Error("bad pnl");
+          const liq = isLiquidatable(pos.side, price, pos.liqPrice);
+          const margin = bi(pos.margin);
+          const fund = pos.fundFrom === 1 || pos.fundFrom === "queued" ? 1 : 0;
+          const owner = pos.owner;
+          let loss = 0n;
+          let returned = 0n;
+          let userTake = 0n;
+          let feeTake = 0n;
+          let feeFull = 0n;
+          let shortfall = 0n;
+          let seized = 0n;
+          if (liq) {
+            loss = margin;
+            seized = margin;
+            if (fund === 0) lpCash += payQueue(loss);
+          } else if (raw < 0n) {
+            const mag = -raw;
+            loss = mag > margin ? margin : mag;
+            const rem = margin - loss;
+            if (fund === 0) {
+              returned = rem;
+              lpCash += payQueue(loss);
+            } else if (rem > 0n) {
+              enqueue(owner, rem, "margin", pos.id);
+            }
+          } else if (raw === 0n) {
+            if (fund === 0) returned = margin;
+            else enqueue(owner, margin, "margin", pos.id);
+          } else {
+            const split = splitWin(raw, haircut, free());
+            feeFull = split.feeFull;
+            feeTake = split.feeTake;
+            userTake = split.userTake;
+            shortfall = split.shortfall;
+            if (fund === 0) returned = margin;
+            else enqueue(owner, margin, "margin", pos.id);
+            if (userTake > 0n) {
+              if (lpCash < userTake) throw new Error("insufficient lp");
+              lpCash -= userTake;
+            }
+            if (feeTake > 0n) {
+              pending += feeTake;
+              reserved += feeTake;
+            }
+            if (shortfall > 0n) enqueue(owner, shortfall, "profit", pos.id);
+          }
+          const realized = liq ? -margin : raw < 0n ? -loss : raw;
+          receipts.push({
+            id: pos.id,
+            raw,
+            realized,
+            liq,
+            loss,
+            seized,
+            returned,
+            userTake,
+            feeTake,
+            feeFull,
+            shortfall,
+            scar: loss > 0n ? loss * emission : 0n,
+            status: liq ? "liquidated" : "closed"
+          });
+        }
+        return {
+          payNodes: payPairs.map((n) => ({
+            index: n.index,
+            owner: n.owner,
+            pubkey: n.pubkey,
+            isNew: !!n.isNew
+          })),
+          newNodes: newNodes.map((n) => ({
+            index: n.index,
+            kind: n.kind,
+            positionId: n.positionId,
+            owner: n.owner,
+            amount: n.amount
+          })),
+          receipts,
+          lpCash,
+          reservedFees: reserved,
+          pendingFees: pending,
+          queueHead: head,
+          queueTail: tail,
+          queueLen
+        };
       }
       module.exports = {
         BPS,
@@ -22898,7 +23081,10 @@ Message: ${transactionMessage}.
         scarForLoss,
         lpFreeOf,
         planSettle,
-        resolvePrice
+        resolvePrice,
+        priceFresh,
+        scaleToExpo,
+        planBatch
       };
     }
   });
@@ -23165,12 +23351,37 @@ Message: ${transactionMessage}.
         queuePda(index) {
           return pda(this.programId, [Buffer.from("q"), u64buf(index)]);
         }
+        async _enqueue(fn) {
+          if (this._inSection) return fn();
+          const prev = this._sectionTail || Promise.resolve();
+          let release;
+          const gate = new Promise((resolve) => {
+            release = resolve;
+          });
+          this._sectionTail = prev.then(() => gate, () => gate);
+          await prev.catch(() => {
+          });
+          this._inSection = true;
+          try {
+            return await fn();
+          } finally {
+            this._inSection = false;
+            release();
+          }
+        }
         async send(feePayer, instructions, signers = []) {
+          if (this._inSection) return this._sendNow(feePayer, instructions, signers);
+          return this._enqueue(() => this._sendNow(feePayer, instructions, signers));
+        }
+        async _sendNow(feePayer, instructions, signers = []) {
+          const prepareOnly = !!this.prepareOnly;
+          const externalFeePayer = this.externalFeePayer || null;
+          const prefixIxs = this.prefixIxs ? this.prefixIxs.slice() : [];
           const tx = new Transaction2();
           tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 14e5 }));
-          for (const item of this.prefixIxs || []) tx.add(item);
+          for (const item of prefixIxs) tx.add(item);
           for (const item of instructions) tx.add(item);
-          const payer = this.externalFeePayer || feePayer;
+          const payer = externalFeePayer || feePayer;
           tx.feePayer = payerKeyOf(payer);
           const uniq = [];
           const seen = /* @__PURE__ */ new Set();
@@ -23182,7 +23393,7 @@ Message: ${transactionMessage}.
               uniq.push(kp);
             }
           }
-          if (this.prepareOnly) {
+          if (prepareOnly) {
             const latest = await withBackoff2(() => this.connection.getLatestBlockhash("confirmed"));
             tx.recentBlockhash = latest.blockhash;
             if (uniq.length) tx.partialSign(...uniq);
@@ -23212,16 +23423,20 @@ Message: ${transactionMessage}.
          * signer is a session key the server does not hold.
          */
         async prepareAs(feePayer, fn) {
-          const prevPrepare = this.prepareOnly;
-          const prevPayer = this.externalFeePayer;
-          this.prepareOnly = true;
-          this.externalFeePayer = payerKeyOf(feePayer);
-          try {
-            return await fn();
-          } finally {
-            this.prepareOnly = prevPrepare;
-            this.externalFeePayer = prevPayer;
-          }
+          return this._enqueue(async () => {
+            const prevPrepare = this.prepareOnly;
+            const prevPayer = this.externalFeePayer;
+            const prevPrefix = this.prefixIxs;
+            this.prepareOnly = true;
+            this.externalFeePayer = payerKeyOf(feePayer);
+            try {
+              return await fn();
+            } finally {
+              this.prepareOnly = prevPrepare;
+              this.externalFeePayer = prevPayer;
+              this.prefixIxs = prevPrefix;
+            }
+          });
         }
         async pollConfirmed(sig) {
           const started = Date.now();
@@ -23323,7 +23538,14 @@ Message: ${transactionMessage}.
           const oracle = head[1] ? layout2.decodeOracle(head[1].data) : null;
           if (!head[2]) throw new Error("clock sysvar missing");
           const now = head[2].data.readBigInt64LE(32);
-          const price = desk && oracle ? math2.resolvePrice(desk, oracle, now) : null;
+          let price = null;
+          if (desk && oracle) {
+            try {
+              price = math2.resolvePrice(desk, oracle, now);
+            } catch {
+              price = null;
+            }
+          }
           const scarSupply = head[3] ? layout2.mintSupply(head[3].data) : 0n;
           const vaultAmount = head[4] ? layout2.tokenAmount(head[4].data) : 0n;
           const users = {};
@@ -23587,58 +23809,20 @@ Message: ${transactionMessage}.
           const price = math2.resolvePrice(desk, oracle, now).price;
           const ids = positionIds.map((id) => math2.bi(id));
           const queue = [];
-          for (let i2 = 0n; i2 < desk.queueTail; i2++) queue.push(await this.readQueue(i2));
-          const plans = [];
-          let lpFree = math2.lpFreeOf(desk);
-          let head = desk.queueHead;
-          const active = queue.filter(Boolean);
+          for (let i2 = 0n; i2 < desk.queueTail; i2++) {
+            const node = await this.readQueue(i2);
+            if (node) queue.push(node);
+          }
+          const positions = [];
           for (const id of ids) {
             const pos = await this.readPosition(ownerKey, id);
             if (!pos || pos.status !== 0) throw new Error("position " + id + " is not open");
-            const plan = math2.planSettle(pos, price, { ...desk, lpCash: lpFree + desk.reservedFees, reservedFees: desk.reservedFees });
-            plans.push({ id, pos, ...math2.planSettle(pos, price, {
-              haircutBps: desk.haircutBps,
-              lpCash: lpFree,
-              reservedFees: 0n
-            }) });
-            const last = plans[plans.length - 1];
-            if (last.raw > 0n) {
-              const split = math2.splitWin(last.raw, desk.haircutBps, lpFree);
-              lpFree -= split.userTake;
-              if (lpFree < 0n) lpFree = 0n;
-            }
-            if (pos.fundFrom === 0 && last.loss > 0n) {
-            }
-            void head;
-            void active;
-            void user;
+            positions.push(pos);
           }
-          let cursor = desk.queueHead;
-          const payPairs = [];
-          const newIndexes = [];
-          let tail = desk.queueTail;
-          const existingTail = desk.queueTail;
-          for (const plan of plans) {
-            if (plan.payCash > 0n && desk.queueLen > 0n) {
-              let cash = plan.payCash;
-              while (cash > 0n && cursor < existingTail) {
-                const node = queue[Number(cursor)];
-                if (!node) throw new Error("missing queue node " + cursor);
-                payPairs.push(node);
-                if (node.remaining > 0n) {
-                  const pay = cash < node.remaining ? cash : node.remaining;
-                  node.remaining -= pay;
-                  cash -= pay;
-                }
-                if (node.remaining === 0n) cursor += 1n;
-                else break;
-              }
-            }
-            for (const kind of plan.kinds) {
-              newIndexes.push({ index: tail, kind, positionId: plan.id });
-              tail += 1n;
-            }
-          }
+          void user;
+          const planned = math2.planBatch(positions, price, desk, queue);
+          const payPairs = planned.payNodes;
+          const newIndexes = planned.newNodes;
           const nPos = ids.length;
           const nPay = payPairs.length;
           const nNew = newIndexes.length;
@@ -23675,7 +23859,8 @@ Message: ${transactionMessage}.
           ];
           for (const id of ids) accounts.push([this.positionPda(ownerKey, id), 1, 0]);
           for (const node of payPairs) {
-            accounts.push([new PublicKey2(node.pubkey), 1, 0]);
+            const pda2 = node.pubkey ? new PublicKey2(node.pubkey) : this.queuePda(node.index);
+            accounts.push([pda2, 1, 0]);
             accounts.push([this.userPda(node.owner), 1, 0]);
           }
           for (const created of newIndexes) accounts.push([this.queuePda(created.index), 1, 0]);

@@ -110,6 +110,38 @@ pub fn scar_for_loss(loss: u64, emission_per_dusd: u64) -> Option<u64> {
     loss.checked_mul(emission_per_dusd)
 }
 
+/// Move pending staker fees into the reward index without paying the same
+/// micro-unit twice.
+///
+/// A repeated `floor(pending * SCALE / total)` used to grow `acc` while
+/// `pending` stayed put (`pending=1`, `total=3`). This reserves one micro
+/// for the index carry and only publishes an increment that pending can cover.
+/// Entitlements can be short a micro. They cannot exceed fees already taken.
+pub fn flush_rewards(acc: u128, pending: u64, total_staked: u64) -> Option<(u128, u64)> {
+    if total_staked == 0 || pending == 0 {
+        return Some((acc, pending));
+    }
+    let total = total_staked as u128;
+    let pending_u = pending as u128;
+    // Leave 1 micro to cover floor((remainder + total*add) / SCALE) carry.
+    let budget = pending_u.checked_sub(1)?;
+    if budget == 0 {
+        return Some((acc, pending));
+    }
+    let add = budget.checked_mul(SCALE)?.checked_div(total)?;
+    if add == 0 {
+        return Some((acc, pending));
+    }
+    let consumed_floor = add.checked_mul(total)?.checked_div(SCALE)?;
+    let reserve = consumed_floor.checked_add(1)?;
+    if reserve > pending_u {
+        return Some((acc, pending));
+    }
+    let new_acc = acc.checked_add(add)?;
+    let new_pending = pending_u.checked_sub(reserve)?;
+    Some((new_acc, new_pending as u64))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -158,5 +190,38 @@ mod tests {
     #[test]
     fn scar_emission() {
         assert_eq!(scar_for_loss(80_000_000, 100), Some(8_000_000_000));
+    }
+
+    #[test]
+    fn reward_dust_is_not_reapplied() {
+        // pending=1, total=3 used to increase the index on every flush
+        // while pending stayed 1, so claimable could pass the reserved fee.
+        let mut acc = 0u128;
+        let mut pending = 1u64;
+        for _ in 0..4 {
+            let next = flush_rewards(acc, pending, 3).unwrap();
+            acc = next.0;
+            pending = next.1;
+        }
+        assert_eq!(pending, 1);
+        assert_eq!(acc, 0);
+        let claimable = (3u128 * acc) / SCALE;
+        assert!(claimable + pending as u128 <= 1);
+    }
+
+    #[test]
+    fn reward_flush_never_exceeds_pending() {
+        let mut acc = 0u128;
+        let mut pending = 5u64;
+        let mut removed = 0u128;
+        for _ in 0..8 {
+            let before = pending;
+            let next = flush_rewards(acc, pending, 3).unwrap();
+            acc = next.0;
+            pending = next.1;
+            removed += (before - pending) as u128;
+            let claimable = (3u128 * acc) / SCALE;
+            assert!(claimable <= removed);
+        }
     }
 }

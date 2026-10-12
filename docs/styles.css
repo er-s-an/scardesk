@@ -352,7 +352,8 @@ main {
 }
 .stats.slim { margin-top: 12px; }
 .stats div { border-top: 1px solid var(--line); padding-top: 6px; }
-dt { color: var(--muted); font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; }
+dt { color: var(--muted); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.stats .hint { display: block; margin-top: 2px; color: var(--muted); font-size: 12px; letter-spacing: 0; text-transform: none; line-height: 1.4; }
 dd { margin: 2px 0 0; font-size: var(--text-md); font-variant-numeric: tabular-nums; }
 
 .row label { flex: 1 1 140px; }
@@ -413,8 +414,8 @@ th {
   text-align: left;
   color: var(--muted);
   font-weight: 400;
-  font-size: 10px;
-  letter-spacing: 0.1em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   padding: 4px 8px 6px 0;
 }
@@ -591,8 +592,8 @@ footer a { color: var(--up-ink); }
     content: attr(data-label);
     display: block;
     color: var(--muted);
-    font-size: 10px;
-    letter-spacing: 0.08em;
+    font-size: 12px;
+    letter-spacing: 0.06em;
     text-transform: uppercase;
   }
   .scroll table tr.empty, .scroll table tr.empty td { display: block; }
@@ -943,8 +944,8 @@ body.trade .quote-preview .span { grid-column: 1 / -1; }
 body.trade .quote-preview span {
   display: block;
   color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.12em;
+  font-size: 12px;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 body.trade .quote-preview strong {

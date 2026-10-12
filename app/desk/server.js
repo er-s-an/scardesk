@@ -771,21 +771,25 @@ async function pushSolOracle(quote) {
   let now = null;
   try { now = await clusterUnix(); } catch { now = null; }
   const maxAge = desk.oracleMaxAge != null ? BigInt(desk.oracleMaxAge) : 120n;
-  let clamped = false;
   let note = "";
   if (!publishFits(publish, now, maxAge)) {
-    clamped = true;
-    note = " The Pyth publish time is outside this cluster clock, so the desk stored the price and let the program stamp the cluster clock.";
-    publish = 0n;
+    note = " Quote publish time is outside the desk window. The previous oracle was left in place. New risk stays on the last valid price until a fresh one arrives.";
+    pushLog({
+      actor: "operator",
+      tool: "oracle.stale",
+      detail: "refused SOL/USD " + quote.source + " publish " + publish.toString(),
+      sig: "",
+    });
+    return { sig: null, publish: publish.toString(), clamped: false, refused: true, note };
   }
   const pushed = await client.pushOracle(keys.admin, quote.price, publish, quote.conf || 0);
   pushLog({
     actor: "operator",
     tool: "oracle.pyth",
-    detail: "SOL/USD " + quote.source + (quote.cluster ? " " + quote.cluster : "") + (clamped ? " clock-stamped" : " publish " + quote.publishTime),
+    detail: "SOL/USD " + quote.source + (quote.cluster ? " " + quote.cluster : "") + " publish " + quote.publishTime,
     sig: pushed.sig,
   });
-  return { sig: pushed.sig, publish: publish.toString(), clamped, note };
+  return { sig: pushed.sig, publish: publish.toString(), clamped: false, note };
 }
 
 async function syncPrice() {
@@ -1075,12 +1079,12 @@ server.listen(PORT, "0.0.0.0", () => {
     " config " + resolved.deploymentFile +
     (resolved.missingDeployment ? " MISSING" : "")
   );
-  // Public Devnet RPCs 429 when an oracle push shares the budget with a trade.
-  // The first push waits, then repeats every three minutes.
+  // The program rejects a publish time outside oracle_max_age. A three-minute
+  // loop left the mark stale. Refresh inside that window.
   setTimeout(() => {
     syncPrice().catch((err) => console.error("price sync", err.message));
-  }, 45_000);
+  }, 5_000);
   setInterval(() => {
     syncPrice().catch((err) => console.error("price sync", err.message));
-  }, 180_000);
+  }, 45_000);
 });

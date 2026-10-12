@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Scardesk — read-only Devnet preview. Synthetic perps desk. Live trading is local (:8787).">
-  <title>Scardesk — 只读预览</title>
+  <meta name="description" content="Scardesk — public Devnet entry is trade.html. This page is a frozen sample. Not mainnet.">
+  <title>Scardesk — 公开入口</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
@@ -59,13 +59,13 @@
   </div>
 
   <div class="banner" role="status">
-    <p class="banner-lead" data-i18n="bannerLead">只读预览 · SOL/BTC/ETH · 真签名交易见 <a href="trade.html">trade.html</a>（Devnet · 非主网）</p>
-    <p data-i18n="bannerBody">本页不签名。公开可签名交易台：<a href="trade.html"><strong>trade.html</strong></a> — 浏览器直连 Devnet RPC，Phantom/Solflare/浏览器密钥。Devnet 程序<strong>已部署</strong>于 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。<strong>1001× 已在 desk 上。</strong>本机 desk (:8787) 仍可用。</p>
-    <p data-i18n="bannerSteps"><strong>公开交易：</strong>打开 <a href="trade.html">trade.html</a>。领水仍需本机 <code>npm run desk:devnet</code> 管理员一次（或向操作者索取）。入金/开仓/平仓在 Pages 上钱包签名。</p>
+    <p class="banner-lead" data-i18n="bannerLead">公开入口：<a href="trade.html">trade.html</a> · Devnet 测试资产 · 非主网</p>
+    <p data-i18n="bannerBody">本页是冻结样例，数字不是你的余额，图也不是实时行情。可签名的产品在 <a href="trade.html"><strong>trade.html</strong></a>。程序 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。链上结算目前只有 SOL/USD。BTC/ETH 在交易页只显示参考报价。</p>
+    <p data-i18n="bannerSteps"><strong>新钱包从 trade.html 开始。</strong>不需要克隆仓库，也不需要本机管理员密钥。</p>
     <ol>
-      <li data-i18n="step1">克隆仓库，然后 <code>cd app && npm install</code>。</li>
-      <li data-i18n="step2"><code>npm run desk:devnet</code> 会设置 <code>SCARDESK_NETWORK=devnet</code>，读取 <code>config/deployment.devnet.json</code>，并使用 <code>config/networks.json</code> 中的 RPC。<code>SCARDESK_RPC</code> 可覆盖该 URL。<code>npm run desk:localnet</code> 是另一条路径。</li>
-      <li data-i18n="step3">打开 <code>http://127.0.0.1:8787</code>。连接 Phantom、Solflare 或浏览器密钥。领水、入金，然后开仓。不要 Submit。</li>
+      <li data-i18n="step1">打开 <a href="trade.html">trade.html</a>。钱包切到 Devnet。连接 Phantom、Solflare，或使用浏览器密钥。</li>
+      <li data-i18n="step2">Fee SOL 用 <a href="https://faucet.solana.com" rel="noopener">faucet.solana.com</a>。测试 dUSD 在交易页点「领水 1000 dUSD」，这是链上无权限铸造，60 秒冷却，进钱包，不进仓位。</li>
+      <li data-i18n="step3">入金后只占用可提现余额开 SOL/USD。平仓在持仓表。出金只取可提现余额。债权开仓未开放。</li>
     </ol>
   </div>
 
@@ -83,7 +83,7 @@
     <header class="ph chart-ph">
       <div class="chart-title">
         <h2 id="chart-h">Chart</h2>
-        <span class="pill live">LIVE</span>
+        <span class="pill" data-i18n="sampleChart">样例</span>
       </div>
       <div class="chart-controls">
         <nav class="timeframes" aria-label="Timeframe">
@@ -106,14 +106,14 @@
         <text x="12" y="210" fill="#A89A92" font-family="IBM Plex Mono, monospace" font-size="11">SOL/USD · Tick · read-only preview</text>
       </svg>
     </div>
-    <p class="fine">Read-only. Live desk switches SOL/BTC/ETH, Tick→1d, and optional EMA21. Red is up. Ash is down.</p>
+    <p class="fine" data-i18n="chartFine">冻结样例图。不是实时报价。公开交易、真实标记和三市场切换在 trade.html。</p>
   </section>
 
   <main>
     <section class="panel" id="account" aria-labelledby="account-h">
       <header class="ph">
         <h2 id="account-h" data-i18n="account">账户</h2>
-        <span class="pill" data-i18n="owner">所有者</span>
+        <span class="pill" data-i18n="sampleTag">样例数字</span>
       </header>
       <dl class="stats">
         <div><dt data-i18n="balance">余额</dt><dd>1087 dUSD</dd></div>
@@ -291,7 +291,7 @@
     <p data-i18n="footer1">Scardesk 是独立实验。与 papertrade.xyz 无关。</p>
     <p data-i18n="footer2">演示稳定币。相同结算规则。非主网资金。Devnet 程序 E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b 已部署 · maxLeverage 1001。</p>
     <p class="zh-only" data-i18n="footerZh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
-    <p class="addrs">Program Devnet E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b · maxLeverage 1001 · upgrade authority FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U · local blotter snapshot · live desk http://127.0.0.1:8787</p>
+    <p class="addrs">Program Devnet E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b · maxLeverage 1001 · 公开入口 <a href="trade.html">trade.html</a> · 本页是冻结样例，不是实时余额</p>
   </footer>
 
   <script>
@@ -299,26 +299,29 @@
   var KEY = 'scardesk.lang';
   var I18N = {
     zh: {
-      title: 'Scardesk — 只读预览',
-      eyebrow: 'SOL/USD 交易台',
+      title: 'Scardesk — 公开入口',
+      eyebrow: 'SOL/BTC/ETH · 样例画面',
       mark: '标记价',
-      pyth: 'pyth · 暂定',
+      pyth: '冻结样例',
       redUp: '红 = 涨',
-      pxNote: '冻结读数。Devnet 上赞助的 Pyth SOL/USD，打上时钟戳后写入本机 desk。Hermes 仍需 PYTH_API_KEY。灰为跌。',
+      pxNote: '冻结读数，不是你的成交价。公开页 trade.html 才读取当前市场的报价。',
+      sampleChart: '样例',
+      chartFine: '冻结样例图。不是实时报价。公开交易、真实标记和三市场切换在 trade.html。',
+      sampleTag: '样例数字',
       walletsAria: '钱包（本页禁用）',
       browserKey: '浏览器密钥',
       actorsAria: '谁的交易台',
       aliceSession: 'Alice 会话',
       linkState: '只读 · Devnet 程序已上线 · 本页不签名',
-      whoFine: '本地账本快照。Devnet 程序 E7kH2K4Y…WXF4b 已部署；1001× 已验证。真交易在本机连接钱包。',
+      whoFine: '本页不签名。公开交易在 trade.html：连接钱包、领测试 dUSD、入金、开平仓。',
       riskEn: '<strong>合成永续 · 亏损注资 LP · FIFO 兑付。</strong>仅隔离保证金。不可部分平仓、不可追加。1001× 下几个基点即可清算全部保证金。本页是该交易台的画面，不发送任何交易。',
       riskZh: '高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。本页只读，不签名、不结算。',
-      bannerLead: '只读预览 · 真交易见本机 desk (:8787)',
-      bannerBody: '本页不签名、不发送交易。下方数字来自本地账本快照，不是实时余额。Devnet 程序<strong>已部署</strong>于 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。<strong>1001× 已在 desk 上。</strong>',
-      bannerSteps: '<strong>三步打开交易台。</strong>本文件可放在 GitHub Pages。交易需要带演示操作者密钥的机器上运行 <code>npm run desk:devnet</code>。',
-      step1: '克隆仓库，然后 <code>cd app && npm install</code>。',
-      step2: '<code>npm run desk:devnet</code> 会设置 <code>SCARDESK_NETWORK=devnet</code>，读取 <code>config/deployment.devnet.json</code>，并使用 <code>config/networks.json</code> 中的 RPC。<code>SCARDESK_RPC</code> 可覆盖该 URL。<code>npm run desk:localnet</code> 是另一条路径。',
-      step3: '打开 <code>http://127.0.0.1:8787</code>。连接 Phantom、Solflare 或浏览器密钥。领水、入金，然后开仓。不要 Submit。',
+      bannerLead: '公开入口：<a href="trade.html">trade.html</a> · Devnet 测试资产 · 非主网',
+      bannerBody: '本页是冻结样例，数字不是你的余额，图也不是实时行情。可签名的产品在 <a href="trade.html"><strong>trade.html</strong></a>。程序 <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>。链上结算目前只有 SOL/USD。BTC/ETH 在交易页只显示参考报价。',
+      bannerSteps: '<strong>新钱包从 trade.html 开始。</strong>不需要克隆仓库，也不需要本机管理员密钥。',
+      step1: '打开 <a href="trade.html">trade.html</a>。钱包切到 Devnet。连接 Phantom、Solflare，或使用浏览器密钥。',
+      step2: 'Fee SOL 用 <a href="https://faucet.solana.com" rel="noopener">faucet.solana.com</a>。测试 dUSD 在交易页点「领水 1000 dUSD」，这是链上无权限铸造，60 秒冷却，进钱包，不进仓位。',
+      step3: '入金后只占用可提现余额开 SOL/USD。平仓在持仓表。出金只取可提现余额。债权开仓未开放。',
       proofTitle: '链上证明',
       proofQueue: 'queueWrite',
       proofScar: 'scarMint',
@@ -330,7 +333,7 @@
       openCount: '持仓',
       queueDist: '队列距离',
       notInLine: '未入队',
-      accountFine: 'Alice · 演示密钥 · 会话已武装。抵押品为演示稳定币 dUSD。',
+      accountFine: '样例数字，不是连接钱包后的余额。Alice 是演示账，不是公开入口。',
       deposit: '入金',
       withdraw: '出金',
       ticket: '下单',
@@ -390,26 +393,29 @@
       footerZh: '高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。'
     },
     en: {
-      title: 'Scardesk — read-only preview',
-      eyebrow: 'SOL/USD desk',
+      title: 'Scardesk — public entry',
+      eyebrow: 'SOL/BTC/ETH · sample frame',
       mark: 'Mark',
-      pyth: 'pyth · provisional',
+      pyth: 'Frozen sample',
       redUp: 'red = up',
-      pxNote: 'Frozen read. Sponsored Pyth SOL/USD on devnet, clock-stamped onto the local desk. Hermes still needs PYTH_API_KEY. Ash is down.',
+      pxNote: 'Frozen read, not your fill. trade.html loads the quote for the market you select.',
+      sampleChart: 'Sample',
+      chartFine: 'Frozen sample chart. Not a live quote. Public trading, the real mark, and market switching are on trade.html.',
+      sampleTag: 'Sample figures',
       walletsAria: 'Wallets, disabled on this page',
       browserKey: 'Browser key',
       actorsAria: 'Whose desk',
       aliceSession: 'Alice session',
       linkState: 'Read-only · Devnet program live · nothing on this page signs',
-      whoFine: 'Blotter snapshot from local ledger. Devnet program E7kH2K4Y…WXF4b is deployed; 1001× proven. Live desk connects a wallet locally.',
+      whoFine: 'This page does not sign. Public trading is trade.html: connect, faucet test dUSD, deposit, open and close.',
       riskEn: '<strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. At 1001× a few basis points liquidate the whole margin. This page is a picture of that desk. It does not send a transaction.',
       riskZh: 'Mechanism demo of high-leverage synthetic derivatives; not advice; principal at risk; queue payouts depend on later inflow. This page is read-only — no signatures, no settlement.',
-      bannerLead: 'Read-only preview · live desk is local (:8787)',
-      bannerBody: 'Nothing here signs or sends a transaction. The figures below are a local-ledger snapshot, not a live balance. Devnet program <strong>is deployed</strong> at <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>. <strong>1001× is on the desk.</strong>',
-      bannerSteps: '<strong>Open the trading desk in three steps.</strong> This file can sit on GitHub Pages. Trading needs <code>npm run desk:devnet</code> on a machine with the demo operator key.',
-      step1: 'Clone the repo, then <code>cd app && npm install</code>.',
-      step2: '<code>npm run desk:devnet</code> sets <code>SCARDESK_NETWORK=devnet</code>, reads <code>config/deployment.devnet.json</code>, and uses the RPC in <code>config/networks.json</code>. <code>SCARDESK_RPC</code> overrides that URL. <code>npm run desk:localnet</code> is the other way.',
-      step3: 'Open <code>http://127.0.0.1:8787</code>. Connect Phantom, Solflare, or Browser key. Faucet, deposit, then open. Do not Submit.',
+      bannerLead: 'Public entry: <a href="trade.html">trade.html</a> · Devnet test asset · not mainnet',
+      bannerBody: 'This page is a frozen sample. The figures are not your balance and the chart is not a live quote. The signing product is <a href="trade.html"><strong>trade.html</strong></a>. Program <a href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b</code></a>. On-chain settlement is SOL/USD. BTC and ETH on the trade page are reference quotes.',
+      bannerSteps: '<strong>A new wallet starts at trade.html.</strong> No clone and no local admin key.',
+      step1: 'Open <a href="trade.html">trade.html</a>. Switch the wallet to Devnet. Connect Phantom, Solflare, or use the browser key.',
+      step2: 'Fee SOL comes from <a href="https://faucet.solana.com" rel="noopener">faucet.solana.com</a>. Test dUSD is the on-page faucet: permissionless mint, 1000 dUSD, 60s cooldown, into the wallet, not into a position.',
+      step3: 'After deposit, opens spend withdrawable cash on SOL/USD only. Close from the positions table. Withdraw only withdrawable cash. Queued-claim opens stay off.',
       proofTitle: 'On-chain proof',
       proofQueue: 'queueWrite',
       proofScar: 'scarMint',
@@ -421,7 +427,7 @@
       openCount: 'Open',
       queueDist: 'Queue distance',
       notInLine: 'not in line',
-      accountFine: 'Alice · demo key · session armed. Collateral is demo stable dUSD.',
+      accountFine: 'Sample figures, not a connected wallet. Alice is a demo ledger, not the public entry.',
       deposit: 'Deposit',
       withdraw: 'Withdraw',
       ticket: 'Ticket',

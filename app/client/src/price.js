@@ -12,6 +12,7 @@
 const fs = require("fs");
 const path = require("path");
 const { PublicKey } = require("@solana/web3.js");
+const { scaleToExpo } = require("./math");
 
 const __d = typeof __dirname !== "undefined" ? __dirname : ".";
 const APP_ROOT = path.join(__d, "..", "..");
@@ -88,21 +89,6 @@ function getMarket(id) {
     cfg.markets.find((m) => m.id === cfg.default) ||
     cfg.markets[0]
   );
-}
-
-function scaleToExpo(value, expo, target) {
-  let v = BigInt(value);
-  let e = Number(expo);
-  if (!Number.isFinite(e)) throw new Error("bad expo");
-  while (e > target) {
-    v /= 10n;
-    e -= 1;
-  }
-  while (e < target) {
-    v *= 10n;
-    e += 1;
-  }
-  return v;
 }
 
 function fromParsed(priceObj, source, attempts, feed, marketId) {

@@ -109,12 +109,38 @@ class DeskClient {
     return pda(this.programId, [Buffer.from("q"), u64buf(index)]);
   }
 
+  async _enqueue(fn) {
+    if (this._inSection) return fn();
+    const prev = this._sectionTail || Promise.resolve();
+    let release;
+    const gate = new Promise((resolve) => {
+      release = resolve;
+    });
+    this._sectionTail = prev.then(() => gate, () => gate);
+    await prev.catch(() => {});
+    this._inSection = true;
+    try {
+      return await fn();
+    } finally {
+      this._inSection = false;
+      release();
+    }
+  }
+
   async send(feePayer, instructions, signers = []) {
+    if (this._inSection) return this._sendNow(feePayer, instructions, signers);
+    return this._enqueue(() => this._sendNow(feePayer, instructions, signers));
+  }
+
+  async _sendNow(feePayer, instructions, signers = []) {
+    const prepareOnly = !!this.prepareOnly;
+    const externalFeePayer = this.externalFeePayer || null;
+    const prefixIxs = this.prefixIxs ? this.prefixIxs.slice() : [];
     const tx = new Transaction();
     tx.add(ComputeBudgetProgram.setComputeUnitLimit({ units: 1_400_000 }));
-    for (const item of this.prefixIxs || []) tx.add(item);
+    for (const item of prefixIxs) tx.add(item);
     for (const item of instructions) tx.add(item);
-    const payer = this.externalFeePayer || feePayer;
+    const payer = externalFeePayer || feePayer;
     tx.feePayer = payerKeyOf(payer);
     const uniq = [];
     const seen = new Set();
@@ -126,7 +152,7 @@ class DeskClient {
         uniq.push(kp);
       }
     }
-    if (this.prepareOnly) {
+    if (prepareOnly) {
       const latest = await withBackoff(() => this.connection.getLatestBlockhash("confirmed"));
       tx.recentBlockhash = latest.blockhash;
       if (uniq.length) tx.partialSign(...uniq);
@@ -158,16 +184,20 @@ class DeskClient {
    * signer is a session key the server does not hold.
    */
   async prepareAs(feePayer, fn) {
-    const prevPrepare = this.prepareOnly;
-    const prevPayer = this.externalFeePayer;
-    this.prepareOnly = true;
-    this.externalFeePayer = payerKeyOf(feePayer);
-    try {
-      return await fn();
-    } finally {
-      this.prepareOnly = prevPrepare;
-      this.externalFeePayer = prevPayer;
-    }
+    return this._enqueue(async () => {
+      const prevPrepare = this.prepareOnly;
+      const prevPayer = this.externalFeePayer;
+      const prevPrefix = this.prefixIxs;
+      this.prepareOnly = true;
+      this.externalFeePayer = payerKeyOf(feePayer);
+      try {
+        return await fn();
+      } finally {
+        this.prepareOnly = prevPrepare;
+        this.externalFeePayer = prevPayer;
+        this.prefixIxs = prevPrefix;
+      }
+    });
   }
 
   async pollConfirmed(sig) {
@@ -282,7 +312,14 @@ class DeskClient {
     const oracle = head[1] ? layout.decodeOracle(head[1].data) : null;
     if (!head[2]) throw new Error("clock sysvar missing");
     const now = head[2].data.readBigInt64LE(32);
-    const price = desk && oracle ? math.resolvePrice(desk, oracle, now) : null;
+    let price = null;
+    if (desk && oracle) {
+      try {
+        price = math.resolvePrice(desk, oracle, now);
+      } catch {
+        price = null;
+      }
+    }
     const scarSupply = head[3] ? layout.mintSupply(head[3].data) : 0n;
     const vaultAmount = head[4] ? layout.tokenAmount(head[4].data) : 0n;
     const users = {};
@@ -561,64 +598,21 @@ class DeskClient {
     const price = math.resolvePrice(desk, oracle, now).price;
     const ids = positionIds.map((id) => math.bi(id));
     const queue = [];
-    for (let i = 0n; i < desk.queueTail; i++) queue.push(await this.readQueue(i));
+    for (let i = 0n; i < desk.queueTail; i++) {
+      const node = await this.readQueue(i);
+      if (node) queue.push(node);
+    }
 
-    const plans = [];
-    let lpFree = math.lpFreeOf(desk);
-    let head = desk.queueHead;
-    const active = queue.filter(Boolean);
+    const positions = [];
     for (const id of ids) {
       const pos = await this.readPosition(ownerKey, id);
       if (!pos || pos.status !== 0) throw new Error("position " + id + " is not open");
-      const plan = math.planSettle(pos, price, { ...desk, lpCash: lpFree + desk.reservedFees, reservedFees: desk.reservedFees });
-      // planSettle uses lpFreeOf(desk). Pass a desk whose free balance is the running free.
-      plans.push({ id, pos, ...math.planSettle(pos, price, {
-        haircutBps: desk.haircutBps,
-        lpCash: lpFree,
-        reservedFees: 0n,
-      }) });
-      const last = plans[plans.length - 1];
-      if (last.raw > 0n) {
-        const split = math.splitWin(last.raw, desk.haircutBps, lpFree);
-        lpFree -= split.userTake;
-        if (lpFree < 0n) lpFree = 0n;
-      }
-      if (pos.fundFrom === 0 && last.loss > 0n) {
-        // cash loss refills free LP after the queue, approximated after we assign pay pairs
-      }
-      void head;
-      void active;
-      void user;
+      positions.push(pos);
     }
-
-    // Pay pairs are shared across the batch, starting at the current head.
-    // Recompute pay cash per position in order and consume a cursor over the queue.
-    let cursor = desk.queueHead;
-    const payPairs = [];
-    const newIndexes = [];
-    let tail = desk.queueTail;
-    const existingTail = desk.queueTail;
-    for (const plan of plans) {
-      if (plan.payCash > 0n && desk.queueLen > 0n) {
-        let cash = plan.payCash;
-        while (cash > 0n && cursor < existingTail) {
-          const node = queue[Number(cursor)];
-          if (!node) throw new Error("missing queue node " + cursor);
-          payPairs.push(node);
-          if (node.remaining > 0n) {
-            const pay = cash < node.remaining ? cash : node.remaining;
-            node.remaining -= pay;
-            cash -= pay;
-          }
-          if (node.remaining === 0n) cursor += 1n;
-          else break;
-        }
-      }
-      for (const kind of plan.kinds) {
-        newIndexes.push({ index: tail, kind, positionId: plan.id });
-        tail += 1n;
-      }
-    }
+    void user;
+    const planned = math.planBatch(positions, price, desk, queue);
+    const payPairs = planned.payNodes;
+    const newIndexes = planned.newNodes;
 
     const nPos = ids.length;
     const nPay = payPairs.length;
@@ -657,7 +651,8 @@ class DeskClient {
     ];
     for (const id of ids) accounts.push([this.positionPda(ownerKey, id), 1, 0]);
     for (const node of payPairs) {
-      accounts.push([new PublicKey(node.pubkey), 1, 0]);
+      const pda = node.pubkey ? new PublicKey(node.pubkey) : this.queuePda(node.index);
+      accounts.push([pda, 1, 0]);
       accounts.push([this.userPda(node.owner), 1, 0]);
     }
     for (const created of newIndexes) accounts.push([this.queuePda(created.index), 1, 0]);

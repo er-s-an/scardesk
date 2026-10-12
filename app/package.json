@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "node --check client/src/math.js && node --check client/src/layout.js && node --check client/src/chain.js && node --check client/src/agent.js && node --check client/src/price.js && node --check client/src/markets-runtime.js && node --check desk/public/chart.js && node --check scripts/verify.js && node --check desk/server.js && node --check desk/public/app.js",
+    "test": "node --check client/src/math.js && node --check client/src/layout.js && node --check client/src/chain.js && node --check client/src/agent.js && node --check client/src/price.js && node --check client/src/markets-runtime.js && node --check desk/public/chart.js && node --check scripts/verify.js && node --check scripts/invariants.js && node --check desk/server.js && node --check desk/public/app.js && node scripts/invariants.js",
     "verify": "node scripts/verify.js",
     "desk": "node desk/server.js",
     "desk:localnet": "SCARDESK_NETWORK=localnet node desk/server.js",

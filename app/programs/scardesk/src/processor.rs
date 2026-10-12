@@ -425,6 +425,16 @@ fn deposit(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progra
             return Err(ScarError::BadAccount.into());
         }
     }
+    // Check the vault before the transfer. Surplus stays unassigned and does
+    // not block an honest deposit. A short vault rejects the deposit.
+    let actual = token_amount(&vault.data.borrow())?;
+    if actual < desk.vault_accounted {
+        msg!("evt=inventory;actual={};accounted={}", actual, desk.vault_accounted);
+        return Err(ScarError::Inventory.into());
+    }
+    if actual > desk.vault_accounted {
+        msg!("evt=surplus;actual={};accounted={}", actual, desk.vault_accounted);
+    }
     invoke(
         &spl_token::instruction::transfer(
             &spl_token::id(),
@@ -438,11 +448,6 @@ fn deposit(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progra
     )?;
     user.balance = user.balance.checked_add(amount).ok_or(ScarError::MathOverflow)?;
     desk.vault_accounted = desk.vault_accounted.checked_add(amount).ok_or(ScarError::MathOverflow)?;
-    let actual = token_amount(&vault.data.borrow())?;
-    if actual != desk.vault_accounted {
-        msg!("evt=inventory;actual={};accounted={}", actual, desk.vault_accounted);
-        return Err(ScarError::Inventory.into());
-    }
     write_user(user_ai, &user)?;
     write_desk(desk_ai, &desk)?;
     msg!("evt=deposit;amount={};balance={}", amount, user.balance);
@@ -478,6 +483,16 @@ fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progr
             return Err(ScarError::BadAccount.into());
         }
     }
+    // Same pre-image as deposit. Withdrawing `amount` keeps any surplus and
+    // rejects a vault that is already short of the accounted balance.
+    let actual = token_amount(&vault.data.borrow())?;
+    if actual < desk.vault_accounted {
+        msg!("evt=inventory;actual={};accounted={}", actual, desk.vault_accounted);
+        return Err(ScarError::Inventory.into());
+    }
+    if actual > desk.vault_accounted {
+        msg!("evt=surplus;actual={};accounted={}", actual, desk.vault_accounted);
+    }
     let (desk_pda, bump) = Pubkey::find_program_address(&[b"desk"], program_id);
     require_pda(desk_ai, &desk_pda)?;
     let bump_s = [bump];
@@ -495,11 +510,7 @@ fn withdraw(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Progr
         &[seeds],
     )?;
     user.balance -= amount;
-    desk.vault_accounted -= amount;
-    let actual = token_amount(&vault.data.borrow())?;
-    if actual != desk.vault_accounted {
-        return Err(ScarError::Inventory.into());
-    }
+    desk.vault_accounted = desk.vault_accounted.checked_sub(amount).ok_or(ScarError::MathOverflow)?;
     write_user(user_ai, &user)?;
     write_desk(desk_ai, &desk)?;
     msg!("evt=withdraw;amount={};balance={}", amount, user.balance);
@@ -555,14 +566,24 @@ fn push_oracle(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
     require_pda(oracle_ai, &desk.oracle)?;
     let price = read_i64(data, 0)?;
     let expo = read_i32(data, 8)?;
-    let mut publish_time = read_i64(data, 16)?;
+    let publish_time = read_i64(data, 16)?;
     let conf = read_u64(data, 24)?;
     if price <= 0 || expo != PRICE_EXPO {
         return Err(ScarError::BadExpo.into());
     }
     let now = Clock::get()?.unix_timestamp;
-    if publish_time == 0 {
-        publish_time = now;
+    // Do not rewrite a missing timestamp to "now". That launders a stale quote.
+    if publish_time <= 0
+        || publish_time > now.saturating_add(5)
+        || now.saturating_sub(publish_time) > desk.oracle_max_age as i64
+    {
+        msg!(
+            "evt=oracle_reject;publish={};now={};max={}",
+            publish_time,
+            now,
+            desk.oracle_max_age
+        );
+        return Err(ScarError::BadPrice.into());
     }
     let oracle = Oracle {
         source: 1,
@@ -930,10 +951,21 @@ fn settle_many(
         }
         user.open_count = user.open_count.saturating_sub(1);
         write_position(pos_ai, &position)?;
+        // `pnl` stays the mark PnL stored on the position. `realized` is the
+        // cash result: a liquidation seizes the whole isolated margin.
+        let realized: i128 = if liq {
+            -(position.margin as i128)
+        } else if raw < 0 && -raw > position.margin as i128 {
+            -(position.margin as i128)
+        } else {
+            raw
+        };
         msg!(
-            "evt=settle;pos={};status={};pnl={};fee={};paid={};queued={};scar={};src={}",
+            "evt=settle;pos={};status={};mark={};realized={};pnl={};fee={};paid={};queued={};scar={};src={}",
             position.id,
             position.status,
+            raw,
+            realized,
             position.pnl,
             position.fee,
             position.paid_out,
@@ -1438,15 +1470,10 @@ fn harvest(desk: &mut Desk, user: &mut User) -> ProgramResult {
 }
 
 fn flush_acc(desk: &mut Desk) -> ProgramResult {
-    if desk.total_staked == 0 || desk.pending_fees == 0 {
-        return Ok(());
-    }
-    let total = desk.total_staked as u128;
-    let pending = desk.pending_fees as u128;
-    let add = pending.checked_mul(SCALE).ok_or(ScarError::MathOverflow)? / total;
-    let consumed = add.checked_mul(total).ok_or(ScarError::MathOverflow)? / SCALE;
-    desk.acc_reward = desk.acc_reward.checked_add(add).ok_or(ScarError::MathOverflow)?;
-    desk.pending_fees -= consumed as u64;
+    let (acc, pending) = flush_rewards(desk.acc_reward, desk.pending_fees, desk.total_staked)
+        .ok_or(ScarError::MathOverflow)?;
+    desk.acc_reward = acc;
+    desk.pending_fees = pending;
     Ok(())
 }
 
@@ -1459,7 +1486,12 @@ fn resolve_price(desk: &Desk, oracle: &Oracle, now: i64) -> Result<(i64, u8), Pr
     if fresh {
         return Ok((oracle.price, 1));
     }
-    if desk.fixture_price > 0 && desk.fixture_expo == PRICE_EXPO {
+    let fixture_fresh = desk.fixture_price > 0
+        && desk.fixture_expo == PRICE_EXPO
+        && desk.fixture_time > 0
+        && desk.fixture_time <= now.saturating_add(5)
+        && now.saturating_sub(desk.fixture_time) <= desk.oracle_max_age as i64;
+    if fixture_fresh {
         return Ok((desk.fixture_price, 2));
     }
     Err(ScarError::BadPrice.into())
