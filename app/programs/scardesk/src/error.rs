@@ -30,6 +30,8 @@ pub enum ScarError {
     Inventory = 25,
     NotLiquidatable = 26,
     BadExpo = 27,
+    /// Permissionless demo faucet called again inside the cooldown window.
+    FaucetCooldown = 28,
 }
 
 impl From<ScarError> for ProgramError {

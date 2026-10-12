@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Scardesk — Devnet signed trades in the browser. Real signatures. Not mainnet.">
+  <title>Scardesk — Devnet Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Inter:wght@400;500;600&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    body[data-busy="1"] { cursor: progress; }
+    body[data-busy="1"] button:not(.lang-switch button) { opacity: 0.7; pointer-events: none; }
+    .markets { display: flex; gap: 4px; margin-top: 6px; }
+    .markets button { min-height: 32px; padding: 4px 10px; }
+    .markets button.on { background: var(--up); color: var(--up-ink); }
+    #tx-log { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow: auto; }
+    #tx-log li { padding: 4px 0; border-bottom: 1px solid var(--line); font-size: var(--text-xs); }
+    #tx-log a { color: var(--up-ink); }
+    .toast[data-tone="ok"] { border-color: var(--up); }
+    .toast[data-tone="wait"] { border-color: var(--ash); }
+    .up { color: var(--up); }
+    .dn { color: var(--ash); }
+    .banner-trade { border-left: 3px solid var(--up); }
+    .gap-note { border: 1px solid var(--line); padding: 10px 12px; background: var(--paper); margin: 0 0 12px; }
+    .mono { font-family: var(--mono); }
+    table.pos { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
+    table.pos th, table.pos td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
+    .nav-switch { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .nav-switch a { color: var(--up-ink); }
+  </style>
+</head>
+<body>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <header class="mast">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <p class="eyebrow" id="market-eyebrow">SOL/USD 交易台</p>
+        <h1>Scardesk</h1>
+        <nav class="markets" id="markets" role="tablist" aria-label="Market">
+          <button type="button" role="tab" data-market="SOL/USD" class="on" aria-selected="true">SOL</button>
+          <button type="button" role="tab" data-market="BTC/USD" aria-selected="false">BTC</button>
+          <button type="button" role="tab" data-market="ETH/USD" aria-selected="false">ETH</button>
+        </nav>
+      </div>
+    </div>
+    <div class="quote">
+      <div class="q-label" data-i18n="mark">标记价</div>
+      <div class="q-px" id="px">—</div>
+      <div class="q-meta">
+        <span id="src" class="pill">—</span>
+        <span id="delta" class="delta">—</span>
+      </div>
+      <p class="fine px-note" id="px-note">—</p>
+    </div>
+    <div class="who-col">
+      <div class="lang-switch" role="group" aria-label="Language">
+        <button type="button" id="lang-zh" class="on" data-lang="zh" aria-pressed="true">中文</button>
+        <button type="button" id="lang-en" data-lang="en" aria-pressed="false">EN</button>
+      </div>
+      <div class="wallets" aria-label="Connect a wallet">
+        <button type="button" id="btn-phantom">Phantom</button>
+        <button type="button" id="btn-solflare">Solflare</button>
+        <button type="button" id="btn-burner" data-i18n="browserKey">浏览器密钥</button>
+        <button type="button" id="btn-disconnect" hidden data-i18n="disconnect">断开</button>
+      </div>
+      <p class="link-state" id="link-state" data-phase="idle" data-i18n="idle">未连接 · Devnet</p>
+      <p class="fine nav-switch">
+        <a href="index.html" data-i18n="preview">只读预览</a>
+        · <button type="button" id="btn-refresh" class="ghost" data-i18n="refresh">刷新</button>
+      </p>
+    </div>
+  </header>
+
+  <div class="risk" role="note">
+    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin. maxLeverage <strong>1001</strong>. At 1001× a few bps liquidate the whole margin.</p>
+  </div>
+
+  <div class="banner banner-trade" role="status">
+    <p class="banner-lead" data-i18n="banner">Devnet · 真实签名 · 非主网</p>
+    <p data-i18n="bannerBody">本页在浏览器内构建并发送交易，直连 OnFinality Devnet RPC。无本机 desk、无隧道。一键领水：钱包签名铸造 1000 demo dUSD（60 秒冷却）。</p>
+    <p class="fine">Program <a id="prog-link" href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4Y…WXF4b</code></a> · <span id="desk-meta">—</span></p>
+  </div>
+
+  <p id="next-step" class="next-step" data-i18n="nextConnect">下一步：连接 Phantom / Solflare / 浏览器密钥</p>
+
+  <main>
+    <section class="panel" id="account" aria-labelledby="account-h">
+      <header class="ph">
+        <h2 id="account-h" data-i18n="account">账户</h2>
+        <span class="pill">wallet</span>
+      </header>
+      <dl class="stats">
+        <div><dt data-i18n="balance">余额</dt><dd id="bal">—</dd></div>
+        <div><dt data-i18n="walletHold">钱包 dUSD</dt><dd id="wallet-dusd">—</dd></div>
+        <div><dt data-i18n="queued">排队中</dt><dd id="queued">—</dd></div>
+        <div><dt data-i18n="opens">持仓数</dt><dd id="opens">—</dd></div>
+      </dl>
+      <p class="fine" id="who">—</p>
+      <div class="gap-note">
+        <p class="fine" data-i18n="faucetGap">领水为链上无权限 demo faucet：连接钱包后点「领水 1000 dUSD」，签名即铸造。60 秒冷却。Fee SOL 请用 faucet.solana.com。</p>
+      </div>
+      <div class="row">
+        <label>dUSD<input id="cash-amt" inputmode="decimal" value="100"></label>
+        <button type="button" id="btn-deposit" data-i18n="deposit">入金</button>
+        <button type="button" id="btn-withdraw" data-i18n="withdraw">出金</button>
+      </div>
+      <div class="row">
+        <button type="button" id="btn-faucet" class="ghost" data-i18n="faucet">领水 1000 dUSD</button>
+        <button type="button" id="btn-sol" class="ghost" data-i18n="feeSol">领 Fee SOL</button>
+      </div>
+    </section>
+
+    <section class="panel" id="ticket" aria-labelledby="ticket-h">
+      <header class="ph">
+        <h2 id="ticket-h" data-i18n="ticket">下单</h2>
+        <span class="pill" id="ticket-market">SOL/USD · isolated</span>
+      </header>
+      <div class="sides" role="group" aria-label="Side">
+        <button type="button" id="side-long" class="side on" data-side="long" data-i18n="long">做多</button>
+        <button type="button" id="side-short" class="side" data-side="short" data-i18n="short">做空</button>
+      </div>
+      <div class="ticket-grid">
+        <label data-i18n-label="margin">Margin dUSD
+          <input id="margin" inputmode="decimal" value="10">
+        </label>
+        <label data-i18n-label="leverage">Leverage
+          <input id="lev" type="number" min="1" max="1001" value="5">
+        </label>
+        <label data-i18n-label="fundFrom">Fund from
+          <select id="fund">
+            <option value="balance" data-i18n="fromBal">balance</option>
+            <option value="queued" data-i18n="fromQ">queued</option>
+          </select>
+        </label>
+      </div>
+      <p class="fine" id="market-note"></p>
+      <button type="button" id="btn-open" data-i18n="open">开仓</button>
+    </section>
+
+    <section class="panel" id="positions" aria-labelledby="pos-h">
+      <header class="ph">
+        <h2 id="pos-h" data-i18n="positions">持仓</h2>
+        <span class="pill">SOL/USD</span>
+      </header>
+      <div style="overflow:auto">
+        <table class="pos">
+          <thead>
+            <tr><th>#</th><th>side</th><th>lev</th><th>margin</th><th>notional</th><th>entry</th><th>uPnL</th><th></th></tr>
+          </thead>
+          <tbody id="pos-body">
+            <tr><td colspan="8" class="fine">—</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" id="log-panel" aria-labelledby="log-h">
+      <header class="ph">
+        <h2 id="log-h">Tx</h2>
+        <span class="pill">explorer</span>
+      </header>
+      <ul id="tx-log"><li class="fine">—</li></ul>
+    </section>
+  </main>
+
+  <footer class="fine" style="padding: 16px; opacity: 0.7;">
+    Scardesk Pages trade · Architecture A (browser prepare+send) · no keys in repo · do not Submit
+  </footer>
+
+  <script src="scardesk-client.js"></script>
+  <script src="trade-app.js"></script>
+</body>
+</html>

@@ -14,6 +14,105 @@ let tradeAsSession = sessionStorage.getItem("scardesk-as-session") === "1";
 let linkPhase = "idle";
 let linkHint = "";
 const SESSION_STORE = "scardesk-session";
+let market = sessionStorage.getItem("scardesk-market") || "SOL/USD";
+let chart = null;
+let chartTf = sessionStorage.getItem("scardesk-tf") || "Tick";
+(function bootMarketFromUrl() {
+  try {
+    const q = new URLSearchParams(location.search);
+    if (q.get("market")) market = q.get("market");
+    if (q.get("tf")) chartTf = q.get("tf");
+  } catch { /* ignore */ }
+})();
+
+function marketOnChain(data) {
+  if (data && typeof data.marketOnChain === "boolean") return data.marketOnChain;
+  return market === "SOL/USD";
+}
+
+function ensureChart() {
+  const canvas = $("mark-chart");
+  if (!canvas || !window.ScardeskChart) return null;
+  if (!chart) chart = new window.ScardeskChart(canvas);
+  chart.setMarket(market);
+  chart.setTimeframe(chartTf);
+  const ema = $("ema-toggle");
+  chart.setShowEma(!!(ema && ema.checked));
+  return chart;
+}
+
+async function loadHistory() {
+  const c = ensureChart();
+  if (!c) return;
+  try {
+    const res = await fetch("/api/history?market=" + encodeURIComponent(market));
+    if (!res.ok) return;
+    const body = await res.json();
+    c.setBars(body.bars || []);
+    const entries = ((snap && snap.positions) || [])
+      .filter((p) => p.status === "open" && (!p.market || p.market === market))
+      .map((p) => ({ side: p.side, price: Number(String(p.entry).replace(/,/g, "")) }))
+      .filter((e) => Number.isFinite(e.price));
+    c.setEntries(entries);
+    c.draw();
+  } catch { /* chart is best-effort */ }
+}
+
+async function setMarket(next) {
+  market = next || "SOL/USD";
+  sessionStorage.setItem("scardesk-market", market);
+  for (const btn of document.querySelectorAll("#markets button")) {
+    const on = btn.dataset.market === market;
+    btn.classList.toggle("on", on);
+    btn.setAttribute("aria-selected", on ? "true" : "false");
+  }
+  const eye = $("market-eyebrow");
+  if (eye) eye.textContent = market + " desk";
+  const tm = $("ticket-market");
+  if (tm) tm.textContent = market + " · isolated";
+  document.title = "Scardesk — " + market;
+  try {
+    await fetch("/api/market", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ market }),
+    });
+  } catch { /* desk may be mid-restart */ }
+  lastPx = null;
+  lastDir = 0;
+  await refresh();
+  await loadHistory();
+}
+
+async function deskBook(op, body) {
+  setBusy(true);
+  try {
+    const res = await fetch("/api/desk-book", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ op, market, ...body }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      toast(explain(new Error(data.error || ("desk-book " + res.status))), "bad");
+      return null;
+    }
+    if (op === "open") toast("Desk-book open on " + market + " (not on-chain PDA).", "ok");
+    if (op === "close") {
+      const scar = data.position && data.position.scarMinted && data.position.scarMinted !== "0";
+      toast(scar ? "Desk-book closed. Soft SCAR credit (not minted on-chain)." : "Desk-book closed.", "ok");
+    }
+    await refresh();
+    await loadHistory();
+    return data;
+  } catch (err) {
+    toast(explain(err), "bad");
+    return null;
+  } finally {
+    setBusy(false);
+  }
+}
+
 
 const SCAR_ERRORS = {
   0: "The desk rejected that instruction. Retry once.",
@@ -23,7 +122,7 @@ const SCAR_ERRORS = {
   4: "No usable price. Push the oracle, or set the fixture.",
   6: "Not enough dUSD on the desk. Faucet, deposit, or lower the amount.",
   7: "Not enough queued dUSD. Fund from balance, or wait in the queue.",
-  8: "Leverage must be from 1 to 1000.",
+  8: "Leverage is above the desk maximum. Lower it and retry.",
   9: "Margin must be greater than zero.",
   10: "That position is not open.",
   11: "That position belongs to another account.",
@@ -41,6 +140,7 @@ const SCAR_ERRORS = {
   25: "The vault and the desk do not match. Deposit only what the dUSD wallet holds. Faucet first if it is empty.",
   26: "This position is not past its liquidation price.",
   27: "The oracle exponent is not the one this desk accepts.",
+  28: "Faucet cooldown (60s). Wait, then retry.",
 };
 
 function explain(err, logs) {
@@ -48,8 +148,16 @@ function explain(err, logs) {
   const blob = [msg].concat(logs || []).join("\n");
   if (/Phantom is not installed/i.test(blob)) return "Phantom is not installed in this browser. Use Solflare, or Browser key.";
   if (/Solflare is not installed/i.test(blob)) return "Solflare is not installed in this browser. Use Phantom, or Browser key.";
-  if (/user rejected|rejected the request/i.test(blob)) return "The wallet rejected the signature. Nothing was sent.";
-  if (/blockhash not found|block height exceeded/i.test(blob)) return "The blockhash expired. Retry the action.";
+  if (/too many requests|-32029|429 Too Many Requests|\bRPC 429\b|RPC is busy \(429\)/i.test(blob)) {
+    return "The RPC is busy (429). Wait a few seconds. Nothing new was signed.";
+  }
+  if (/user rejected|rejected the request|approval denied|user declined|transaction cancelled|transaction canceled/i.test(blob)) {
+    return "The wallet rejected the signature. Nothing was sent.";
+  }
+  if (/blockhash not found|block height exceeded|blockhash expired/i.test(blob)) return "The blockhash expired. Retry the action.";
+  if (/failed to fetch|networkerror|econnrefused|network request failed|socket hang up/i.test(blob)) {
+    return "The desk did not answer. It will retry. Check that npm run desk is running.";
+  }
   if (/arm a session/i.test(blob)) return "Arm a session key in this browser first. Then trade as session.";
   if (/Initialize the dUSD wallet/i.test(blob)) return "The dUSD wallet is not on the desk yet. Reconnect and let the setup finish.";
   if (/Get fee SOL before arming/i.test(blob)) return "Press Fee SOL before Arm session. The session key pays position rent and still cannot withdraw.";
@@ -63,9 +171,6 @@ function explain(err, logs) {
   }
   if (/insufficient funds|insufficient lamports|debit an account/i.test(blob)) {
     return "Not enough SOL for the fee or for rent. Press Fee SOL, then retry.";
-  }
-  if (/failed to fetch|networkerror|econnrefused/i.test(blob)) {
-    return "The desk did not answer. It will retry. Check that npm run desk is running.";
   }
   const one = msg.replace(/\s+/g, " ").trim();
   return one.length > 180 ? one.slice(0, 180) + "…" : one;
@@ -118,13 +223,24 @@ function liqPreview(entryRaw, leverage, liqBps, which) {
   return px > 0n ? px : 0n;
 }
 
-function toast(text, tone) {
+function toast(text, tone, ms) {
   const el = $("toast");
   el.hidden = false;
   el.dataset.tone = tone || "bad";
   el.textContent = text;
   clearTimeout(toast._t);
-  toast._t = setTimeout(() => { el.hidden = true; }, 4600);
+  toast._t = setTimeout(() => { el.hidden = true; }, ms || 5200);
+}
+
+function flashPanel(id) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.remove("flash");
+  void el.offsetWidth;
+  el.classList.add("flash");
+  clearTimeout(flashPanel._t && flashPanel._t[id]);
+  flashPanel._t = flashPanel._t || {};
+  flashPanel._t[id] = setTimeout(() => el.classList.remove("flash"), 1800);
 }
 
 function stamp() {
@@ -207,14 +323,16 @@ function toastFrom(body, events) {
   const minted = (events || []).some((e) => e.name === "scar_minted");
   const queued = (events || []).some((e) => e.name === "queue_write");
   if (minted) stamp();
+  if (minted) flashPanel("scar");
+  if (queued) flashPanel("queue");
   if (body && body.sessionReject) {
     linkHint = "";
-    toast("Session key rejected. It can trade. It cannot withdraw, stake, or claim.", "bad");
+    toast("Session key rejected. It can trade. It cannot withdraw, stake, or claim.", "bad", 8000);
   } else if (body && body.ok === false) {
     toast(explain(body.error || "rejected", body.logs), "bad");
-  } else if (minted && queued) toast("SCAR minted. A claim was written to the queue.", "ok");
-  else if (minted) toast("SCAR minted.", "ok");
-  else if (queued) toast("Queue write. The unpaid win is waiting.", "ok");
+  } else if (minted && queued) toast("SCAR minted. The unpaid part of this close is in the FIFO queue.", "ok", 7000);
+  else if (minted) toast("SCAR minted. The loss is now a program credit. It does not transfer.", "ok", 7000);
+  else if (queued) toast("Queue write. The unpaid win is waiting at the FIFO head.", "ok", 7000);
   else if (body && body.sponsored) toast("Operator sponsored fee SOL. The public faucet refused.", "ok");
   else if (body && body.sig) toast("Landed " + body.sig.slice(0, 12), "ok");
   else if (body && body.read && body.result) toast("Agent read. No balance was edited.", "ok");
@@ -223,6 +341,7 @@ function toastFrom(body, events) {
 function ownerQuery() {
   const q = new URLSearchParams();
   q.set("actor", actor);
+  q.set("market", market);
   if (actor === "wallet" && walletAdapter && walletAdapter.publicKey) {
     q.set("owner", walletAdapter.publicKey.toBase58());
     if (tradeAsSession) q.set("as", "session");
@@ -364,8 +483,10 @@ async function connectWallet(kind) {
     linkPhase = "setup";
     setLink("setup", label + " signed in. Reading the desk…");
     await refresh();
-    const sol = snap && snap.actor && snap.actor.sol ? Number(snap.actor.sol) : 0;
-    if (!(sol >= 0.02)) {
+    const solText = snap && snap.actor ? snap.actor.sol : "";
+    const sol = Number(solText);
+    // A dash means the balance read failed. Do not airdrop on that.
+    if (solText && solText !== "—" && !(sol >= 0.02)) {
       setLink("setup", "Requesting fee SOL…");
       toast("Requesting fee SOL…", "wait");
       const funded = await walletOp("airdrop", {}, { quiet: true });
@@ -425,6 +546,7 @@ async function disconnectWallet() {
   const role = $("role");
   if (role) role.textContent = "owner";
   showWalletChrome();
+  toast("Disconnected. The blotter is back on Alice. The browser key stays in this browser.", "ok");
   await refresh();
 }
 
@@ -452,15 +574,7 @@ async function act(op, extra) {
       viewGen += 1;
       render(body.state);
     }
-    const minted = (body.events || []).some((e) => e.name === "scar_minted");
-    const queued = (body.events || []).some((e) => e.name === "queue_write");
-    if (minted) stamp();
-    if (!body.ok) toast(explain(body.error || "rejected", body.logs), "bad");
-    else if (minted && queued) toast("SCAR minted. A claim was written to the queue.", "ok");
-    else if (minted) toast("SCAR minted.", "ok");
-    else if (queued) toast("Queue write. The unpaid win is waiting.", "ok");
-    else if (body.sessionReject) toast("Session key rejected. It can trade. It cannot withdraw, stake, or claim.", "bad");
-    else if (body.sig) toast("Landed " + body.sig.slice(0, 12), "ok");
+    toastFrom(body, body.events || []);
     return body;
   } catch (err) {
     toast(explain(err), "bad");
@@ -507,9 +621,11 @@ function renderQuote(data) {
   const note = $("px-note");
   if (note) {
     if (feed.ok) {
-      note.textContent = "Sponsored Pyth SOL/USD" + (feed.cluster ? " on " + feed.cluster : "") + ". Hermes still needs PYTH_API_KEY." + (feed.clamped ? " This cluster clock stamped the publish time." : "") + (feed.pushError ? " The on-chain push did not land." : "");
+      const mkt = (data.price && data.price.market) || data.market || market;
+      note.textContent = "Sponsored Pyth " + mkt + (feed.cluster ? " on " + feed.cluster : "") + ". Hermes still needs PYTH_API_KEY." + (feed.clamped ? " This cluster clock stamped the publish time." : "") + (feed.pushError ? " The on-chain push did not land." : "") + (data.marketOnChain === false ? " Desk-book market — opens are not the Devnet desk PDA." : "");
     } else {
-      note.textContent = "Fixture is provisional. Hermes returns 401 without PYTH_API_KEY, and no fresh sponsored Pyth account was read.";
+      const mkt = (data.price && data.price.market) || data.market || market;
+      note.textContent = "Fixture for " + mkt + " is provisional. Hermes returns 401 without PYTH_API_KEY, and no fresh sponsored Pyth account was read.";
     }
   }
 }
@@ -517,6 +633,12 @@ function renderQuote(data) {
 function renderAccount(data) {
   const a = data.actor || {};
   $("bal").textContent = a.missing ? "—" : a.balance + " dUSD";
+  const walletHold = $("wallet-hold");
+  if (walletHold) {
+    walletHold.textContent = a.missing
+      ? "This account is not on the desk yet. Reconnect so setup can finish."
+      : "Wallet holds " + (a.walletDusd || "0") + " dUSD. Deposit moves it onto the desk. The balance above is what an open can use.";
+  }
   $("queued").textContent = a.missing ? "—" : a.queued + " dUSD";
   $("opens").textContent = a.missing ? "—" : String(a.openCount);
   if (data.queueDistance === null || data.queueDistance === undefined) {
@@ -545,18 +667,23 @@ function renderAccount(data) {
   $("btn-as").classList.toggle("on", wallet && tradeAsSession);
 }
 
-function renderTicket(data) {
-  const note = $("ticket-note");
+function deskMaxLev(data) {
+  const n = data && data.desk && Number(data.desk.maxLeverage);
+  return Number.isFinite(n) && n >= 1 ? n : 1001;
+}
+
+function ticketReasons(data) {
   const reasons = [];
-  const desk = data.desk;
   const marginText = ($("margin").value || "").trim();
   const margin = micro(marginText || "0");
   const levRaw = num($("lev").value);
-  const lev = Math.max(1, Math.min(1000, levRaw || 1));
+  const maxLev = deskMaxLev(data);
   if (!data.price) reasons.push("No mark yet. Wait for the price, or set the fixture in the operator rail.");
   if (margin === null) reasons.push("Margin must be a number, like 100 or 12.5.");
   else if (margin <= 0n) reasons.push("Margin must be greater than zero.");
-  if (!Number.isFinite(levRaw) || levRaw < 1 || levRaw > 1000) reasons.push("Leverage must be from 1 to 1000.");
+  if (!Number.isFinite(levRaw) || levRaw < 1 || levRaw > maxLev) {
+    reasons.push("Leverage must be from 1 to " + maxLev + ".");
+  }
   const a = data.actor || {};
   const fund = $("fund").value;
   if (!a.missing && margin !== null && margin > 0n) {
@@ -568,8 +695,69 @@ function renderTicket(data) {
         : "Desk balance is " + a.balance + " dUSD. Faucet, then deposit, or lower the margin.");
     }
   }
-  if (a.missing) reasons.push("This account is not on the desk yet.");
-  const blocked = margin === null || !data.price || !desk || reasons.some((r) => r.startsWith("Margin must") || r.startsWith("Leverage"));
+  if (a.missing) reasons.push("This account is not on the desk yet. Connect, then wait for setup to finish.");
+  if (!data.desk) reasons.push("The desk account is not on this cluster.");
+  return reasons;
+}
+
+function renderNext(data) {
+  const el = $("next-step");
+  if (!el) return;
+  const on = !!(walletAdapter && walletAdapter.publicKey);
+  const a = data.actor || {};
+  if (on && actor !== "wallet") {
+    el.textContent = "Viewing the demo ledger. Mine returns to your wallet. A session key can trade. Withdraw, stake, and claim are rejected.";
+    return;
+  }
+  if (!on && actor === "session") {
+    el.textContent = "This session key can open and close. Withdraw, stake, and claim are sent, then rejected.";
+    return;
+  }
+  if (!on) {
+    el.textContent = "Next: connect Phantom, Solflare, or a browser key. Then faucet, deposit, and open.";
+    return;
+  }
+  if (a.missing) {
+    el.textContent = "Next: finish setup. The desk creates your user and the dUSD wallet. Then faucet and deposit.";
+    return;
+  }
+  if (tradeAsSession) {
+    el.textContent = "Session key can open and close. Withdraw, stake, and claim are sent, then rejected. It cannot take dUSD out.";
+    return;
+  }
+  const bal = micro(a.balance || "0");
+  const held = micro(a.walletDusd || "0");
+  if (bal === null || bal <= 0n) {
+    if (held !== null && held > 0n) {
+      el.textContent = "Next: Deposit wallet dUSD onto the desk. An open larger than the desk balance is stopped here.";
+      return;
+    }
+    el.textContent = "Next: Faucet 1000 dUSD, then Deposit. An open larger than the desk balance is stopped here.";
+    return;
+  }
+  if (!a.openCount) {
+    el.textContent = marketOnChain(snap)
+      ? "Next: open a position on " + market + ". A loss mints SCAR. A win the LP cannot pay enters the FIFO queue."
+      : "Next: open a desk-book position on " + market + ". Mark/chart are live; settlement is provisional until a market PDA exists.";
+    return;
+  }
+  el.textContent = "Next: close the open position. Settlement uses the same path as the agent.";
+}
+
+function renderTicket(data) {
+  const note = $("ticket-note");
+  const desk = data.desk;
+  const marginText = ($("margin").value || "").trim();
+  const margin = micro(marginText || "0");
+  const levRaw = num($("lev").value);
+  const maxLev = deskMaxLev(data);
+  const lev = Math.max(1, Math.min(maxLev, levRaw || 1));
+  const levInput = $("lev");
+  const levRange = $("lev-range");
+  if (levInput) levInput.max = String(maxLev);
+  if (levRange) levRange.max = String(maxLev);
+  const reasons = ticketReasons(data);
+  const blocked = margin === null || !data.price || !desk || reasons.some((r) => r.startsWith("Margin must") || r.startsWith("Leverage") || r.startsWith("The desk account"));
   if (blocked) {
     $("prev-notional").textContent = "—";
     $("prev-liq").textContent = "—";
@@ -586,8 +774,9 @@ function renderTicket(data) {
     note.textContent = reasons[0] || "";
   }
   const open = $("btn-open");
-  if (open && document.body.dataset.busy !== "1" && document.body.dataset.connect !== "1") {
-    open.disabled = reasons.length > 0;
+  if (open) {
+    open.classList.toggle("is-blocked", reasons.length > 0);
+    open.title = reasons[0] || "Open an isolated position";
   }
 }
 
@@ -598,8 +787,12 @@ function cellHtml(label, inner, cls) {
 function renderPositions(data) {
   const body = $("pbody");
   const rows = data.positions || [];
+  const mkt = data.market || market;
   if (!rows.length) {
-    body.innerHTML = '<tr class="empty"><td colspan="12">No positions yet. An open ticket lands here.</td></tr>';
+    const empty = marketOnChain(data)
+      ? "No positions yet on " + mkt + ". An open ticket lands here."
+      : "No desk-book positions on " + mkt + ". Opens here are provisional (not the Devnet desk PDA).";
+    body.innerHTML = '<tr class="empty"><td colspan="13">' + empty + '</td></tr>';
     return;
   }
   body.innerHTML = rows.map((p) => {
@@ -608,13 +801,19 @@ function renderPositions(data) {
     const tone = raw > 0n ? "win" : raw < 0n ? "loss" : "";
     const actions = [];
     if (p.mine && p.status === "open") {
-      actions.push('<button type="button" data-close="' + p.id + '">Close</button>');
+      if (p.deskBook) {
+        actions.push('<button type="button" data-desk-close="' + p.id + '">Close</button>');
+      } else {
+        actions.push('<button type="button" data-close="' + p.id + '">Close</button>');
+      }
     }
-    if (p.status === "open" && p.liqNow) {
+    if (p.status === "open" && p.liqNow && !p.deskBook) {
       actions.push('<button type="button" data-liq="' + p.id + '" data-owner="' + p.owner + '">Liquidate</button>');
     }
+    const status = p.deskBook ? p.status + " · desk" : p.status;
     return "<tr class=\"" + [p.mine ? "mine" : "", tone].filter(Boolean).join(" ") + "\">" +
       cellHtml("Id", p.id) +
+      cellHtml("Mkt", p.market || mkt) +
       cellHtml("Who", p.who) +
       cellHtml("Side", p.side, "side-" + p.side) +
       cellHtml("Lev", p.leverage + "×") +
@@ -624,7 +823,7 @@ function renderPositions(data) {
       cellHtml("Liq", p.liq) +
       cellHtml("Fund", p.fundFrom) +
       cellHtml("SCAR", p.scar === "0" ? "—" : p.scar) +
-      cellHtml("Status", p.status) +
+      cellHtml("Status", status) +
       cellHtml("", actions.join(" ") || "—") +
       "</tr>";
   }).join("");
@@ -737,6 +936,7 @@ function render(data) {
   }
   renderQuote(data);
   renderAccount(data);
+  renderNext(data);
   renderTicket(data);
   renderPositions(data);
   renderQueue(data);
@@ -745,7 +945,8 @@ function render(data) {
   renderAddrs(data);
   const net = $("net-line");
   if (net) {
-    net.textContent = "Demo stable on " + (data.network || "unknown") + ". Same settlement rules. Not mainnet funds. " + (data.rpc || "");
+    const file = data.link && data.link.deploymentFile ? " · " + data.link.deploymentFile : "";
+    net.textContent = "Demo stable on " + (data.network || "unknown") + file + ". Not mainnet funds. " + (data.rpc || "");
   }
   for (const btn of document.querySelectorAll("#actors button")) {
     btn.classList.toggle("on", btn.dataset.actor === actor);
@@ -756,21 +957,51 @@ function render(data) {
   showWalletChrome();
 }
 
+function armPoll(ms) {
+  if (pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(refresh, ms);
+}
+
 async function refresh() {
   const gen = ++viewGen;
   try {
     const res = await fetch("/api/state?" + ownerQuery().toString());
     if (gen !== viewGen) return;
-    if (!res.ok) throw new Error("state " + res.status);
+    if (!res.ok) {
+      let detail = "state " + res.status;
+      try {
+        const body = await res.json();
+        if (body && body.error) detail = body.error;
+      } catch { /* status line is enough */ }
+      const err = new Error(detail);
+      err.status = res.status;
+      throw err;
+    }
     const data = await res.json();
     if (gen !== viewGen) return;
     render(data);
+    const pace = data.network && data.network !== "localnet" ? 10000 : 4000;
+    if (!refresh._slow && !document.hidden) armPoll(pace);
+    refresh._pace = pace;
+    refresh._slow = false;
   } catch (err) {
     if (gen !== viewGen) return;
+    const text = explain(err);
     const banner = $("banner");
     banner.hidden = false;
-    banner.textContent = "Desk unreachable. The page will retry. " + explain(err);
-    setLink("error", "Desk unreachable");
+    banner.textContent = text;
+    const rate = /too many requests|rpc 429|rpc is busy|-32029/i.test(text);
+    if (linkPhase !== "connecting" && linkPhase !== "setup") {
+      setLink("error", rate ? "RPC busy (429). The desk will retry." : "Desk unreachable. The page will retry.");
+    }
+    if (document.body.dataset.busy !== "1" && (!refresh._told || Date.now() - refresh._told > 20000)) {
+      refresh._told = Date.now();
+      toast(text, "bad");
+    }
+    if (rate && !refresh._slow) {
+      refresh._slow = true;
+      armPoll(20000);
+    }
   }
 }
 
@@ -849,12 +1080,40 @@ function bind() {
   $("btn-faucet").addEventListener("click", () => act("faucet", { amount: "1000" }));
   $("btn-arm").addEventListener("click", () => act("arm-session", {}));
   $("btn-clear").addEventListener("click", () => act("clear-session", {}));
-  $("btn-open").addEventListener("click", () => act("open", {
-    side,
-    margin: $("margin").value,
-    leverage: Number($("lev").value),
-    fundFrom: $("fund").value,
-  }));
+  $("btn-open").addEventListener("click", () => {
+    if (snap) {
+      const reasons = ticketReasons(snap);
+      if (reasons.length) {
+        toast(reasons[0], "bad");
+        return;
+      }
+    }
+    if (!marketOnChain(snap)) {
+      const margin = micro(($("margin").value || "").trim());
+      if (margin === null) {
+        toast("Margin must be a number.", "bad");
+        return;
+      }
+      const owner = (snap.actor && snap.actor.pubkey) || "";
+      const who = (snap.actor && snap.actor.name === "wallet") ? "You" : ((snap.actor && snap.actor.name) || "desk");
+      deskBook("open", {
+        owner,
+        who,
+        side,
+        margin: margin.toString(),
+        leverage: Number($("lev").value),
+        fundFrom: $("fund").value,
+        liqFractionBps: snap.desk ? snap.desk.liqFractionBps : 5000,
+      });
+      return;
+    }
+    act("open", {
+      side,
+      margin: $("margin").value,
+      leverage: Number($("lev").value),
+      fundFrom: $("fund").value,
+    });
+  });
   $("btn-stake").addEventListener("click", () => act("stake", { amount: $("scar-amt").value }));
   $("btn-unstake").addEventListener("click", () => act("unstake", { amount: $("scar-amt").value }));
   $("btn-claim").addEventListener("click", () => act("claim", {}));
@@ -876,11 +1135,57 @@ function bind() {
     $("agent-tool").value = btn.dataset.tool;
   });
   $("pbody").addEventListener("click", (ev) => {
+    const deskClose = ev.target.closest("[data-desk-close]");
     const close = ev.target.closest("[data-close]");
     const liq = ev.target.closest("[data-liq]");
+    if (deskClose) {
+      const owner = (snap && snap.actor && snap.actor.pubkey) || "";
+      deskBook("close", { id: deskClose.dataset.deskClose, owner });
+      return;
+    }
     if (close) act("close", { positionIds: [close.dataset.close] });
     if (liq) act("liquidate", { positionIds: [liq.dataset.liq], owner: liq.dataset.owner });
   });
+
+  const marketsNav = $("markets");
+  if (marketsNav) {
+    marketsNav.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button[data-market]");
+      if (!btn) return;
+      setMarket(btn.dataset.market);
+    });
+  }
+  const tfs = $("timeframes");
+  if (tfs) {
+    tfs.addEventListener("click", (ev) => {
+      const btn = ev.target.closest("button[data-tf]");
+      if (!btn) return;
+      chartTf = btn.dataset.tf;
+      sessionStorage.setItem("scardesk-tf", chartTf);
+      for (const b of tfs.querySelectorAll("button")) {
+        const on = b === btn;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      }
+      const meta = $("chart-meta");
+      if (meta) meta.textContent = chartTf;
+      const c = ensureChart();
+      if (c) {
+        c.setTimeframe(chartTf);
+        c.draw();
+      }
+    });
+  }
+  const ema = $("ema-toggle");
+  if (ema) {
+    ema.addEventListener("change", () => {
+      const c = ensureChart();
+      if (c) {
+        c.setShowEma(ema.checked);
+        c.draw();
+      }
+    });
+  }
 }
 
 function setSide(next) {
@@ -892,6 +1197,33 @@ function setSide(next) {
 
 bind();
 showWalletChrome();
+// Restore market + timeframe chrome before first paint.
+for (const btn of document.querySelectorAll("#markets button")) {
+  const on = btn.dataset.market === market;
+  btn.classList.toggle("on", on);
+  btn.setAttribute("aria-selected", on ? "true" : "false");
+}
+for (const btn of document.querySelectorAll("#timeframes button")) {
+  const on = btn.dataset.tf === chartTf;
+  btn.classList.toggle("on", on);
+  btn.setAttribute("aria-selected", on ? "true" : "false");
+}
+const meta0 = $("chart-meta");
+if (meta0) meta0.textContent = chartTf;
+const eye0 = $("market-eyebrow");
+if (eye0) eye0.textContent = market + " desk";
+const tm0 = $("ticket-market");
+if (tm0) tm0.textContent = market + " · isolated" + (market === "SOL/USD" ? "" : " · desk-book");
+document.title = "Scardesk — " + market;
+ensureChart();
+// Notify server of URL-selected market so /api/state matches chrome.
+const bootMarket = fetch("/api/market", {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ market }),
+}).catch(() => null);
+// History is local ring buffer — paint chart even if /api/state 429s.
+bootMarket.finally(() => loadHistory());
 const savedKind = sessionStorage.getItem("scardesk-wallet-kind");
 if (actor === "wallet" && savedKind && window.ScardeskWallet) {
   connectWallet(savedKind);
@@ -899,13 +1231,13 @@ if (actor === "wallet" && savedKind && window.ScardeskWallet) {
   if (actor === "wallet") actor = "alice";
   refresh();
 }
-pollTimer = setInterval(refresh, 4000);
+armPoll(4000);
 document.addEventListener("visibilitychange", () => {
   if (document.hidden) {
     clearInterval(pollTimer);
     pollTimer = null;
   } else if (!pollTimer) {
     refresh();
-    pollTimer = setInterval(refresh, 4000);
+    armPoll(refresh._slow ? 20000 : (refresh._pace || 4000));
   }
 });

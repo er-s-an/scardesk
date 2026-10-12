@@ -13,6 +13,14 @@ pub const ORACLE_SIZE: usize = 128;
 pub const MINT_SIZE: u64 = 82;
 pub const TOKEN_ACCOUNT_SIZE: u64 = 165;
 
+/// Hard ceiling for desk.max_leverage on init and admin set.
+pub const MAX_LEVERAGE: u16 = 1001;
+
+/// Permissionless demo faucet: fixed 1000 dUSD (6 decimals) per claim.
+pub const DEMO_FAUCET_AMOUNT: u64 = 1_000_000_000;
+/// Minimum seconds between permissionless faucet claims per user.
+pub const DEMO_FAUCET_COOLDOWN_SECS: i64 = 60;
+
 pub const DISC_DESK: u8 = 1;
 pub const DISC_USER: u8 = 2;
 pub const DISC_POSITION: u8 = 3;
@@ -158,6 +166,8 @@ pub struct User {
     pub reward_debt: u128,
     pub next_id: u64,
     pub open_count: u32,
+    /// Unix seconds of last permissionless demo faucet. Zero = never.
+    pub last_faucet_ts: i64,
 }
 
 impl User {
@@ -176,6 +186,7 @@ impl User {
         dst[108..124].copy_from_slice(&self.reward_debt.to_le_bytes());
         dst[124..132].copy_from_slice(&self.next_id.to_le_bytes());
         dst[132..136].copy_from_slice(&self.open_count.to_le_bytes());
+        dst[136..144].copy_from_slice(&self.last_faucet_ts.to_le_bytes());
     }
 
     pub fn unpack(data: &[u8]) -> Result<Self, ProgramError> {
@@ -195,6 +206,8 @@ impl User {
             reward_debt: read_u128(data, 108),
             next_id: read_u64(data, 124),
             open_count: read_u32(data, 132),
+            // Older users pack zeros past open_count; treat as never claimed.
+            last_faucet_ts: if data.len() >= 144 { read_i64(data, 136) } else { 0 },
         })
     }
 }
@@ -400,7 +413,7 @@ mod tests {
             fixture_expo: -8,
             fixture_time: 1_700_000_000,
             oracle_max_age: 60,
-            max_leverage: 1000,
+            max_leverage: MAX_LEVERAGE,
             haircut_bps: 200,
             liq_fraction_bps: 5000,
             min_margin: 1_000_000,
@@ -421,7 +434,7 @@ mod tests {
         let u = Desk::unpack(&buf).unwrap();
         assert_eq!(u.admin, d.admin);
         assert_eq!(u.scar_mint, d.scar_mint);
-        assert_eq!(u.max_leverage, 1000);
+        assert_eq!(u.max_leverage, MAX_LEVERAGE);
         assert_eq!(u.queue_tail, 5);
         assert_eq!(u.acc_reward, 123456789);
         assert_eq!(u.fixture_expo, -8);

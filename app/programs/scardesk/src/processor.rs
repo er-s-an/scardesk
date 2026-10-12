@@ -33,6 +33,8 @@ const IX_LIQUIDATE: u8 = 12;
 const IX_STAKE: u8 = 13;
 const IX_UNSTAKE: u8 = 14;
 const IX_CLAIM: u8 = 15;
+const IX_SET_MAX_LEVERAGE: u8 = 16;
+const IX_DEMO_FAUCET: u8 = 17;
 
 pub fn process(
     program_id: &Pubkey,
@@ -57,6 +59,8 @@ pub fn process(
         &IX_STAKE => stake(program_id, accounts, rest, true),
         &IX_UNSTAKE => stake(program_id, accounts, rest, false),
         &IX_CLAIM => claim(program_id, accounts),
+        &IX_SET_MAX_LEVERAGE => set_max_leverage(program_id, accounts, rest),
+        &IX_DEMO_FAUCET => demo_faucet(program_id, accounts, rest),
         _ => Err(ScarError::BadInstruction.into()),
     }
 }
@@ -88,7 +92,7 @@ fn initialize(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pro
     let oracle_max_age = read_u64(data, 24)?;
     let fixture_price = read_i64(data, 32)?;
     let fixture_expo = read_i32(data, 40)?;
-    if !(1..=1000).contains(&max_leverage) || haircut_bps > 2_000 || liq_fraction_bps == 0
+    if !(1..=MAX_LEVERAGE).contains(&max_leverage) || haircut_bps > 2_000 || liq_fraction_bps == 0
         || liq_fraction_bps > 10_000 || min_margin == 0 || emission == 0
         || oracle_max_age == 0 || fixture_price <= 0 || fixture_expo != PRICE_EXPO
     {
@@ -260,6 +264,7 @@ fn init_user(program_id: &Pubkey, accounts: &[AccountInfo]) -> ProgramResult {
         reward_debt: 0,
         next_id: 0,
         open_count: 0,
+        last_faucet_ts: 0,
     };
     write_bytes(user_ai, &user_pack(&user)?)?;
     msg!("evt=init_user;owner={}", owner.key);
@@ -338,6 +343,59 @@ fn faucet(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Program
         &[seeds],
     )?;
     msg!("evt=faucet;amount={};wallet={}", amount, wallet.key);
+    Ok(())
+}
+
+/// Permissionless demo stable mint: caller signs, desk PDA is mint authority.
+/// Fixed 1000 dUSD, 60s cooldown per user. Devnet / judge path only.
+fn demo_faucet(program_id: &Pubkey, accounts: &[AccountInfo], _data: &[u8]) -> ProgramResult {
+    if accounts.len() < 6 {
+        return Err(ScarError::BadInstruction.into());
+    }
+    let owner = &accounts[0];
+    let user_ai = &accounts[1];
+    let desk_ai = &accounts[2];
+    let dusd = &accounts[3];
+    let wallet = &accounts[4];
+    let token_program = &accounts[5];
+    require_signer(owner)?;
+    require_key(token_program, &spl_token::id())?;
+    let desk = load_desk(program_id, desk_ai)?;
+    let mut user = load_user(program_id, user_ai)?;
+    if owner.key != &user.owner {
+        return Err(ScarError::Unauthorized.into());
+    }
+    let (user_pda, _) = Pubkey::find_program_address(&[b"user", owner.key.as_ref()], program_id);
+    require_pda(user_ai, &user_pda)?;
+    let (wallet_pda, _) = Pubkey::find_program_address(&[b"w", owner.key.as_ref()], program_id);
+    require_pda(wallet, &wallet_pda)?;
+    require_pda(dusd, &desk.dusd_mint)?;
+    {
+        let wdata = wallet.data.borrow();
+        if token_mint(&wdata)? != desk.dusd_mint || token_owner(&wdata)? != *owner.key {
+            return Err(ScarError::BadAccount.into());
+        }
+    }
+    let now = Clock::get()?.unix_timestamp;
+    if user.last_faucet_ts > 0 {
+        let elapsed = now.saturating_sub(user.last_faucet_ts);
+        if elapsed < DEMO_FAUCET_COOLDOWN_SECS {
+            return Err(ScarError::FaucetCooldown.into());
+        }
+    }
+    let amount = DEMO_FAUCET_AMOUNT;
+    let (desk_pda, bump) = Pubkey::find_program_address(&[b"desk"], program_id);
+    require_pda(desk_ai, &desk_pda)?;
+    let bump_s = [bump];
+    let seeds: &[&[u8]] = &[b"desk", &bump_s];
+    invoke_signed(
+        &spl_token::instruction::mint_to(&spl_token::id(), dusd.key, wallet.key, desk_ai.key, &[], amount)?,
+        &[dusd.clone(), wallet.clone(), desk_ai.clone(), token_program.clone()],
+        &[seeds],
+    )?;
+    user.last_faucet_ts = now;
+    write_user(user_ai, &user)?;
+    msg!("evt=demo_faucet;amount={};wallet={};owner={}", amount, wallet.key, owner.key);
     Ok(())
 }
 
@@ -539,6 +597,27 @@ fn set_fixture(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> Pr
     desk.fixture_time = Clock::get()?.unix_timestamp;
     write_desk(desk_ai, &desk)?;
     msg!("evt=fixture;price={}", price);
+    Ok(())
+}
+
+fn set_max_leverage(program_id: &Pubkey, accounts: &[AccountInfo], data: &[u8]) -> ProgramResult {
+    if accounts.len() < 2 || data.len() < 2 {
+        return Err(ScarError::BadInstruction.into());
+    }
+    let admin = &accounts[0];
+    let desk_ai = &accounts[1];
+    require_signer(admin)?;
+    let mut desk = load_desk(program_id, desk_ai)?;
+    if admin.key != &desk.admin {
+        return Err(ScarError::Unauthorized.into());
+    }
+    let max_leverage = read_u16(data, 0)?;
+    if !(1..=MAX_LEVERAGE).contains(&max_leverage) {
+        return Err(ScarError::BadLeverage.into());
+    }
+    desk.max_leverage = max_leverage;
+    write_desk(desk_ai, &desk)?;
+    msg!("evt=set_max_leverage;max={}", max_leverage);
     Ok(())
 }
 
@@ -1223,6 +1302,32 @@ fn mint_scar<'a>(
     require_pda(desk_ai, &desk_pda)?;
     let bump_s = [bump];
     let seeds: &[&[u8]] = &[b"desk", &bump_s];
+    // Older deployed binary froze the treasury on init. SPL mint_to rejects a
+    // frozen destination, so thaw first when needed (AccountState::Frozen = 2).
+    {
+        let tdata = treasury.data.borrow();
+        let frozen = tdata.len() > 108 && tdata[108] == 2;
+        drop(tdata);
+        if frozen {
+            invoke_signed(
+                &spl_token::instruction::thaw_account(
+                    &spl_token::id(),
+                    treasury.key,
+                    scar_mint.key,
+                    desk_ai.key,
+                    &[],
+                )?,
+                &[
+                    treasury.clone(),
+                    scar_mint.clone(),
+                    desk_ai.clone(),
+                    token_program.clone(),
+                ],
+                &[seeds],
+            )?;
+            msg!("evt=treasury_thaw;account={}", treasury.key);
+        }
+    }
     invoke_signed(
         &spl_token::instruction::mint_to(
             &spl_token::id(),

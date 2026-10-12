@@ -65,6 +65,7 @@ function decodeUser(buf) {
     rewardDebt: u128(buf, 108),
     nextId: u64(buf, 124),
     openCount: buf.readUInt32LE(132),
+    lastFaucetTs: buf.length >= 144 ? i64(buf, 136) : 0n,
   };
 }
 

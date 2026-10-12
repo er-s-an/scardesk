@@ -11,15 +11,41 @@ const {
   loadKey,
   eventsFromLogs,
   hasSessionReject,
+  isRateLimit,
+  withBackoff,
   Connection,
   PublicKey,
 } = require("../client/src/chain");
 const math = require("../client/src/math");
+const layout = require("../client/src/layout");
 const { createAgent, TOOLS } = require("../client/src/agent");
 const { fetchSolUsd } = require("../client/src/price");
+const { createRuntime } = require("../client/src/markets-runtime");
+const marketsRt = createRuntime();
 
 const PORT = Number(process.env.PORT || 8787);
 const PUBLIC = path.join(__dirname, "public");
+
+function loadDotEnv() {
+  const file = path.join(APP_ROOT, ".env");
+  if (!fs.existsSync(file)) return;
+  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq < 1) continue;
+    const key = trimmed.slice(0, eq).trim();
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) continue;
+    if (process.env[key]) continue;
+    let value = trimmed.slice(eq + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    process.env[key] = value;
+  }
+}
+
+loadDotEnv();
 
 function readDeployment() {
   try {
@@ -41,13 +67,16 @@ function resolveNet() {
   const nets = readNetworks();
   const named = process.env.SCARDESK_NETWORK || "";
   let deployment = readDeployment();
+  let deploymentFile = "deployment.json";
   let missingDeployment = false;
   if (named) {
-    const specific = path.join(APP_ROOT, "config", "deployment." + named + ".json");
+    deploymentFile = "deployment." + named + ".json";
+    const specific = path.join(APP_ROOT, "config", deploymentFile);
     if (fs.existsSync(specific)) {
       deployment = JSON.parse(fs.readFileSync(specific, "utf8"));
     } else {
       missingDeployment = true;
+      deploymentFile = "deployment.json";
     }
   }
   if (named && nets[named] && nets[named].refused && process.env.SCARDESK_ALLOW_MAINNET !== "1") {
@@ -57,7 +86,7 @@ function resolveNet() {
   const network = named || deployment.network || "localnet";
   const fromFile = named && nets[named] ? nets[named].rpc : "";
   const rpc = process.env.SCARDESK_RPC || fromFile || deployment.rpc || (nets.localnet && nets.localnet.rpc) || "http://127.0.0.1:8899";
-  return { rpc, network, asked: named, missingDeployment };
+  return { rpc, network, asked: named, missingDeployment, deploymentFile };
 }
 
 const resolved = resolveNet();
@@ -72,7 +101,32 @@ const keys = {
   session: loadKey("alice-session.json"),
 };
 const program = loadKey("program.json");
-const connection = new Connection(RPC, "confirmed");
+const connection = new Connection(RPC, {
+  commitment: "confirmed",
+  // The client retries 429 itself. web3's built-in burst shares OnFinality's budget.
+  disableRetryOnRateLimit: true,
+});
+
+async function pollConfirmed(sig) {
+  const started = Date.now();
+  let wait = 1200;
+  while (Date.now() - started < 40000) {
+    try {
+      const tx = await connection.getTransaction(sig, {
+        commitment: "confirmed",
+        maxSupportedTransactionVersion: 0,
+      });
+      if (tx) return tx;
+    } catch (err) {
+      if (!isRateLimit(err)) throw err;
+      wait = Math.min(wait * 2, 8000);
+    }
+    await new Promise((r) => setTimeout(r, wait));
+  }
+  const err = new Error("The transaction was sent. The RPC has not confirmed it yet. Wait, then retry.");
+  err.signature = sig;
+  throw err;
+}
 const client = new DeskClient(connection, program.publicKey);
 
 const log = [];
@@ -221,9 +275,17 @@ async function view(focus, opts = {}) {
     if (upnl !== null) openUpnl += upnl;
   }
   const walletAccount = await client.raw(client.walletPda(focusOwner));
+  let walletDusd = "0";
+  try {
+    if (walletAccount && walletAccount.data && walletAccount.data.length >= 72) {
+      walletDusd = math.fmtMicro(layout.tokenAmount(Buffer.from(walletAccount.data)));
+    }
+  } catch {
+    walletDusd = "0";
+  }
   let sol = "0";
   try {
-    const lamports = await connection.getBalance(focusOwner);
+    const lamports = await withBackoff(() => connection.getBalance(focusOwner));
     sol = (lamports / 1e9).toFixed(3);
   } catch {
     sol = "—";
@@ -231,29 +293,48 @@ async function view(focus, opts = {}) {
   const signerPk = focus === "wallet"
     ? (asSession && user && user.hasSession ? user.session : focusKey)
     : actorOf(focus).publicKey.toBase58();
+  const activeMarket = marketsRt.getActive();
+  const marketMeta = marketsRt.getMarket(activeMarket);
+  const namesForBook = names;
+  // On-chain positions are SOL/USD on the single desk PDA.
+  const chainPositions = positions.map((p) => ({ ...p, market: "SOL/USD", onChain: true, deskBook: false }));
+  const bookRows = marketsRt.bookPositions(focusKey, namesForBook, marketMeta.onChain ? null : activeMarket);
+  const viewPositions = marketMeta.onChain
+    ? chainPositions
+    : bookRows;
+  const overlayPrice = marketsRt.priceView(activeMarket, snap.price);
+  const overlayFeed = marketsRt.feedView(activeMarket);
+
   return {
     network: networkName,
     rpc: RPC,
     focus,
     asSession,
+    market: activeMarket,
+    markets: marketsRt.marketsPayload(),
+    marketNote: marketMeta.note || "",
+    marketOnChain: !!marketMeta.onChain,
     priceFeed: {
-      ok: !!priceFeed.ok,
-      source: priceFeed.source || "",
-      cluster: priceFeed.cluster || "",
-      note: priceFeed.note || priceFeed.error || "",
-      publishTime: priceFeed.publishTime || "",
-      provisional: priceFeed.ok ? !!priceFeed.provisional : true,
-      clamped: !!priceFeed.clamped,
-      pushError: priceFeed.pushError || "",
+      ok: !!overlayFeed.ok,
+      market: activeMarket,
+      source: overlayFeed.source || "",
+      cluster: overlayFeed.cluster || "",
+      note: overlayFeed.note || "",
+      publishTime: overlayFeed.publishTime || "",
+      provisional: !!overlayFeed.provisional,
+      clamped: !!overlayFeed.clamped,
+      pushError: overlayFeed.pushError || "",
+      account: overlayFeed.account || "",
     },
     link: {
       network: networkName,
       rpc: RPC,
       asked: resolved.asked,
       missingDeployment: resolved.missingDeployment,
+      deploymentFile: resolved.deploymentFile,
     },
-    price: snap.price
-      ? { text: math.fmtPrice(snap.price.price), source: snap.price.source, raw: snap.price.price.toString() }
+    price: overlayPrice.raw && overlayPrice.raw !== "0"
+      ? { text: overlayPrice.text, source: overlayPrice.source, raw: overlayPrice.raw, market: activeMarket, onChain: !!overlayPrice.onChain, provisional: !!overlayPrice.provisional }
       : null,
     now: snap.now.toString(),
     addresses: snap.addresses,
@@ -294,6 +375,7 @@ async function view(focus, opts = {}) {
           session: user.session,
           openCount: user.openCount,
           hasWallet: !!walletAccount,
+          walletDusd,
           sol,
           asSession,
         }
@@ -303,12 +385,13 @@ async function view(focus, opts = {}) {
           signer: signerPk,
           missing: true,
           hasWallet: !!walletAccount,
+          walletDusd,
           sol,
           marginInUse: "0",
           openUpnl: "0",
           asSession,
         },
-    positions,
+    positions: viewPositions,
     queue,
     queueDistance: distance,
     queueAhead: math.fmtMicro(ahead),
@@ -363,8 +446,15 @@ async function run(focus, op, body) {
   const ownerKp = ownerFor(focus);
   const ownerKey = ownerKp.publicKey;
   if (op === "faucet") {
-    const result = await client.faucet(keys.admin, ownerKey, body.amount || "1000");
-    pushLog({ actor: "admin", tool: "faucet", detail: "demo stable to wallet, not a settlement", sig: result.sig });
+    // Prefer permissionless demo faucet (owner signs). Falls back to admin mint if needed.
+    let result;
+    try {
+      result = await client.demoFaucet(ownerKp);
+      pushLog({ actor: focus, tool: "faucet", detail: "demo faucet 1000 dUSD (permissionless)", sig: result.sig });
+    } catch (err) {
+      result = await client.faucet(keys.admin, ownerKey, body.amount || "1000");
+      pushLog({ actor: "admin", tool: "faucet", detail: "admin mint fallback", sig: result.sig });
+    }
     return result;
   }
   if (op === "deposit") {
@@ -521,23 +611,14 @@ async function prepareAgent(owner, ownerHandle, sessionPk, body) {
 
 async function broadcast(raw, skipPreflight) {
   try {
-    const sig = await connection.sendRawTransaction(raw, {
+    const sig = await withBackoff(() => connection.sendRawTransaction(raw, {
       skipPreflight: !!skipPreflight,
       preflightCommitment: "confirmed",
-    });
-    const started = Date.now();
-    let tx = null;
-    while (Date.now() - started < 25000) {
-      tx = await connection.getTransaction(sig, {
-        commitment: "confirmed",
-        maxSupportedTransactionVersion: 0,
-      });
-      if (tx) break;
-      await new Promise((r) => setTimeout(r, 400));
-    }
+    }));
+    const tx = await pollConfirmed(sig);
     const logs = tx?.meta?.logMessages || [];
-    const failed = !tx || !!tx.meta?.err;
-    return { sig, logs, failed, err: tx?.meta?.err || null };
+    const failed = !!tx.meta?.err;
+    return { sig, logs, failed, err: tx.meta?.err || null };
   } catch (err) {
     const logs = err.logs || [];
     const wrapped = new Error(err.message || "send failed");
@@ -562,16 +643,15 @@ async function prepareWallet(body) {
       err.status = 400;
       throw err;
     }
-    const result = await client.faucet(keys.admin, owner, body.amount || "1000");
-    const events = eventsFromLogs(result.logs);
-    pushLog({ actor: "admin", tool: "faucet", detail: "dUSD to " + owner.toBase58().slice(0, 4), sig: result.sig, events });
-    return { adminSigned: true, sig: result.sig, logs: result.logs || [], events };
+    // Wallet signs permissionless demo faucet (same path as Pages trade.html).
+    const prepared = await client.prepareAs(owner, () => client.demoFaucet(ownerHandle));
+    return { prepared: prepared.prepared, adminSigned: false, events: [] };
   }
   if (op === "airdrop") {
     try {
       const lamports = networkName === "localnet" || RPC.includes("127.0.0.1") ? 1_000_000_000 : 1_000_000_000;
       const sig = await connection.requestAirdrop(owner, lamports);
-      await connection.confirmTransaction(sig, "confirmed");
+      await pollConfirmed(sig);
       pushLog({ actor: "wallet", tool: "airdrop", detail: "1 SOL on " + networkName, sig });
       return { adminSigned: true, sig, logs: [] };
     } catch (err) {
@@ -590,7 +670,7 @@ async function prepareWallet(body) {
         })
       );
       const sig = await connection.sendTransaction(tx, [keys.admin]);
-      await connection.confirmTransaction(sig, "confirmed");
+      await pollConfirmed(sig);
       pushLog({ actor: "operator", tool: "sponsor", detail: "0.05 SOL fee to " + owner.toBase58().slice(0, 4), sig });
       return { adminSigned: true, sig, logs: [], sponsored: true };
     }
@@ -681,46 +761,55 @@ function rememberQuote(quote) {
   } catch { /* fixture dir may be read-only in a static export */ }
 }
 
+let priceBusy = false;
+
+async function pushSolOracle(quote) {
+  const desk = await client.readDesk();
+  if (!desk) return null;
+  let publish = 0n;
+  try { publish = BigInt(quote.publishTime || "0"); } catch { publish = 0n; }
+  let now = null;
+  try { now = await clusterUnix(); } catch { now = null; }
+  const maxAge = desk.oracleMaxAge != null ? BigInt(desk.oracleMaxAge) : 120n;
+  let clamped = false;
+  let note = "";
+  if (!publishFits(publish, now, maxAge)) {
+    clamped = true;
+    note = " The Pyth publish time is outside this cluster clock, so the desk stored the price and let the program stamp the cluster clock.";
+    publish = 0n;
+  }
+  const pushed = await client.pushOracle(keys.admin, quote.price, publish, quote.conf || 0);
+  pushLog({
+    actor: "operator",
+    tool: "oracle.pyth",
+    detail: "SOL/USD " + quote.source + (quote.cluster ? " " + quote.cluster : "") + (clamped ? " clock-stamped" : " publish " + quote.publishTime),
+    sig: pushed.sig,
+  });
+  return { sig: pushed.sig, publish: publish.toString(), clamped, note };
+}
+
 async function syncPrice() {
-  const quote = await fetchSolUsd();
-  priceFeed = quote;
-  if (!quote.ok) {
-    quote.provisional = true;
-    rememberQuote(quote);
-    return quote;
-  }
+  if (priceBusy) return priceFeed;
+  priceBusy = true;
   try {
-    const desk = await client.readDesk();
-    if (!desk) {
-      rememberQuote(quote);
-      return quote;
-    }
-    let publish = 0n;
-    try { publish = BigInt(quote.publishTime || "0"); } catch { publish = 0n; }
-    let now = null;
-    try { now = await clusterUnix(); } catch { now = null; }
-    const maxAge = desk.oracleMaxAge != null ? BigInt(desk.oracleMaxAge) : 120n;
-    if (!publishFits(publish, now, maxAge)) {
-      quote.clamped = true;
-      quote.clusterNow = now == null ? "" : now.toString();
-      quote.note = (quote.note || "") + " The Pyth publish time is outside this cluster clock, so the desk stored the price and let the program stamp the cluster clock.";
-      publish = 0n;
-    }
-    const pushed = await client.pushOracle(keys.admin, quote.price, publish, quote.conf || 0);
-    pushLog({
-      actor: "operator",
-      tool: "oracle.pyth",
-      detail: quote.source + (quote.cluster ? " " + quote.cluster : "") + (quote.clamped ? " clock-stamped" : " publish " + quote.publishTime),
-      sig: pushed.sig,
+    // Refresh all three marks. Only SOL pushes on-chain oracle (single desk PDA).
+    const all = await marketsRt.syncAll({
+      pushOracle: async (quote) => {
+        try {
+          return await pushSolOracle(quote);
+        } catch (err) {
+          // Surface into quote via markets-runtime catch path
+          throw err;
+        }
+      },
     });
-    quote.sig = pushed.sig;
-    quote.pushedPublishTime = publish.toString();
-  } catch (err) {
-    quote.pushError = err.message || String(err);
-    quote.note = (quote.note || "") + " On-chain push failed: " + String(quote.pushError).slice(0, 160);
+    const sol = all["SOL/USD"] || marketsRt.feeds["SOL/USD"];
+    priceFeed = sol;
+    rememberQuote(sol);
+    return sol;
+  } finally {
+    priceBusy = false;
   }
-  rememberQuote(quote);
-  return quote;
 }
 
 function readBody(req) {
@@ -739,18 +828,68 @@ function readBody(req) {
   });
 }
 
+const viewCache = new Map();
+const viewInflight = new Map();
+
+function viewTtl() {
+  return networkName === "localnet" ? 400 : 8000;
+}
+
+function viewKey(focus, opts) {
+  return [focus, opts.owner || "", opts.as || "", marketsRt.getActive()].join("|");
+}
+
+async function viewCached(focus, opts) {
+  const key = viewKey(focus, opts);
+  const hit = viewCache.get(key);
+  if (hit && Date.now() - hit.at < viewTtl()) return hit.body;
+  if (viewInflight.has(key)) return viewInflight.get(key);
+  const job = view(focus, opts).then((body) => {
+    viewCache.set(key, { at: Date.now(), body });
+    viewInflight.delete(key);
+    return body;
+  }).catch((err) => {
+    viewInflight.delete(key);
+    throw err;
+  });
+  viewInflight.set(key, job);
+  return job;
+}
+
+function rpcBusy(err) {
+  return isRateLimit(err);
+}
+
+function rpcErrorBody(err) {
+  if (rpcBusy(err)) {
+    return {
+      status: 429,
+      error: "RPC 429. The public endpoint is busy. Wait a few seconds. Nothing was signed.",
+    };
+  }
+  return { status: (err && err.status) || 500, error: (err && err.message) || "request failed" };
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     const url = new URL(req.url, "http://127.0.0.1");
     if (req.method === "GET" && url.pathname === "/api/state") {
       const focus = url.searchParams.get("actor") || "alice";
-      return json(res, 200, await view(focus, {
-        owner: url.searchParams.get("owner"),
-        as: url.searchParams.get("as"),
-      }));
+      const marketQ = url.searchParams.get("market");
+      if (marketQ) marketsRt.setActive(marketQ);
+      try {
+        return json(res, 200, await viewCached(focus, {
+          owner: url.searchParams.get("owner"),
+          as: url.searchParams.get("as"),
+        }));
+      } catch (err) {
+        const mapped = rpcErrorBody(err);
+        return json(res, mapped.status, { ok: false, error: mapped.error });
+      }
     }
     if (req.method === "POST" && url.pathname === "/api/prepare") {
       const body = await readBody(req);
+      viewCache.clear();
       try {
         const prepared = await prepareWallet(body);
         const state = await view("wallet", { owner: body.owner, as: body.signer });
@@ -761,6 +900,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method === "POST" && url.pathname === "/api/send") {
       const body = await readBody(req);
+      viewCache.clear();
       try {
         const raw = Buffer.from(body.tx || "", "base64");
         const sent = await broadcast(raw, !!body.skipPreflight);
@@ -817,9 +957,72 @@ const server = http.createServer(async (req, res) => {
         });
       }
     }
+    if (req.method === "GET" && url.pathname === "/api/markets") {
+      return json(res, 200, {
+        ok: true,
+        active: marketsRt.getActive(),
+        markets: marketsRt.marketsPayload(),
+      });
+    }
+    if (req.method === "POST" && url.pathname === "/api/market") {
+      const body = await readBody(req);
+      const id = marketsRt.setActive(body.market || body.id || "SOL/USD");
+      viewCache.clear();
+      return json(res, 200, {
+        ok: true,
+        active: id,
+        markets: marketsRt.marketsPayload(),
+        price: marketsRt.priceView(id, null),
+        priceFeed: marketsRt.feedView(id),
+        history: marketsRt.historyView(id),
+        marketOnChain: !!marketsRt.getMarket(id).onChain,
+        marketNote: marketsRt.getMarket(id).note || "",
+      });
+    }
+    if (req.method === "GET" && url.pathname === "/api/history") {
+      const id = url.searchParams.get("market") || marketsRt.getActive();
+      return json(res, 200, { ok: true, ...marketsRt.historyView(id) });
+    }
+    if (req.method === "POST" && url.pathname === "/api/desk-book") {
+      const body = await readBody(req);
+      viewCache.clear();
+      try {
+        if (body.op === "open") {
+          const row = marketsRt.openBook({
+            market: body.market || marketsRt.getActive(),
+            owner: body.owner || "",
+            who: body.who || "You",
+            side: body.side || "long",
+            marginMicro: body.margin,
+            leverage: body.leverage,
+            fundFrom: body.fundFrom || "balance",
+            liqFractionBps: body.liqFractionBps || (await client.readDesk().then((d) => d && d.liqFractionBps).catch(() => 5000)) || 5000,
+          });
+          pushLog({
+            actor: "desk-book",
+            tool: "positions.open",
+            detail: row.market + " " + row.side + " " + row.leverage + "x desk-book",
+          });
+          return json(res, 200, { ok: true, position: row, deskBook: true });
+        }
+        if (body.op === "close") {
+          const row = marketsRt.closeBook(body.id, body.owner || "");
+          pushLog({
+            actor: "desk-book",
+            tool: "positions.close",
+            detail: row.market + " " + row.id + " pnl " + row.pnl + (row.scarMinted && row.scarMinted !== "0" ? " scar-credit " + row.scarMinted : ""),
+          });
+          return json(res, 200, { ok: true, position: row, deskBook: true });
+        }
+        return json(res, 400, { ok: false, error: "desk-book op must be open or close" });
+      } catch (err) {
+        return json(res, err.status || 500, { ok: false, error: err.message });
+      }
+    }
     if (req.method === "POST" && url.pathname === "/api/act") {
       const body = await readBody(req);
       const focus = body.actor || "alice";
+      viewCache.clear();
       try {
         const result = await run(focus, body.op, body);
         const state = await view(focus, { owner: body.owner, as: body.signer });
@@ -859,14 +1062,25 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "content-type": types[ext] || "application/octet-stream", "cache-control": "no-store" });
     fs.createReadStream(file).pipe(res);
   } catch (err) {
-    json(res, 500, { ok: false, error: err.message });
+    const mapped = rpcErrorBody(err);
+    json(res, mapped.status, { ok: false, error: mapped.error });
   }
 });
 
 server.listen(PORT, "0.0.0.0", () => {
-  console.log("Scardesk desk http://127.0.0.1:" + PORT + " rpc " + RPC + " (" + networkName + ")");
-  syncPrice().catch((err) => console.error("price sync", err.message));
+  console.log(
+    "Scardesk desk http://127.0.0.1:" + PORT +
+    " rpc " + RPC +
+    " (" + networkName + ")" +
+    " config " + resolved.deploymentFile +
+    (resolved.missingDeployment ? " MISSING" : "")
+  );
+  // Public Devnet RPCs 429 when an oracle push shares the budget with a trade.
+  // The first push waits, then repeats every three minutes.
+  setTimeout(() => {
+    syncPrice().catch((err) => console.error("price sync", err.message));
+  }, 45_000);
   setInterval(() => {
     syncPrice().catch((err) => console.error("price sync", err.message));
-  }, 60_000);
+  }, 180_000);
 });

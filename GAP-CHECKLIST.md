@@ -1,32 +1,33 @@
 # Gap checklist
 
-Authority: `FIDELITY.md` A1–A19 and F1–F5. Checked 2026-10-12 against the local ledger and the browser pass in `BROWSER-PROOF.md`. "Local" means the behavior is on this validator and is not on a public explorer.
+Authority: `FIDELITY.md` A1–A19 and F1–F5. Rechecked 2026-10-12 afternoon against the Devnet desk (`deployment.devnet.json`, program `E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b`) and `BROWSER-PROOF.md`. "Local" means an older validator pass. "Devnet" means an explorer transaction or a live account read this afternoon. B1–B10 stay provisional.
 
 | # | Status | Evidence |
 | --- | --- | --- |
-| A1 | Local | No order book. Opens and closes settle against the desk LP and the FIFO queue. |
-| A2 | Local | One fill, full close, no margin top-up. Ticket copy and the program match. |
-| A3 | Local | Max leverage 1000 in `app/config/params.json`. Alice's 1000× liquidation is still in the positions table. |
-| A4 | Local | A loss pays the queue, then LP cash. The browser loss of 7.5 dUSD paid queue index 4 in full. |
-| A5 | Local | SCAR mints on qualified loss only. Browser mint was 750 SCAR on 7.5 dUSD. No `mint_free`. Bob still shows 11000 staked from the verify script. The browser session cannot stake or claim. |
-| A6 | Local | Queue rows show head, kind, and amount left. The browser win wrote 18.375 dUSD at index 6 because LP cash was 0. |
-| A7 | Local, not re-clicked | `fundFrom: queued` is in the program and in the verify script. This browser pass funded opens from balance. |
-| A8 | Local | Session `Ep6c…Etdh` opened and closed. Withdraw and claim logged `evt=session_reject`. Balance did not move. |
-| A9 | Local | Tool list is `positions.open`, `positions.close`, `positions.closed`, `account.retrieve`, `paper.stake`, `paper.unstake`, `paper.claim`. This pass ran agent open, agent close, and `paper.claim` (rejected). It did not click `account.retrieve`, `paper.stake`, or `paper.unstake`. |
-| A10 | Local | The ticket and the agent both call the same `client.open` / `client.close` path. |
-| A11 | Gap | Accounts are readable on localnet. There is no public explorer transaction. Older local signatures fall out of the validator's block window and `solana confirm` returns Not found. |
-| A12 | Local | Account, ticket, positions, queue, SCAR, and the agent log are on one desk. At 390px they stack in that order. At 720px and below, queue and position rows become labeled cards so Close is not trapped in a wide scroll. |
-| A13 | Local | The loss close logged `scar_minted` and the desk toasts "SCAR minted." The queue shows distance to the head. A refused action names the next step (dUSD, queued claim, free SCAR, fee SOL, missing extension) instead of a raw simulation dump. The ticket blocks an open that the balance cannot fund. |
-| A14 | Local | Copy is synthetic perps, loss-funded LP, FIFO. The page does not say paper-trading simulator or Alpaca. |
-| A15 | Local | Red `#ff2418` is up. Ash `#8a847f` is down. Measured on mark 81, 79, and 80 in this pass. Not a pixel copy. |
-| A16 | Local | Loss mint and a queued win both happened on the browser key. The queued win was not later paid out by a following loss in this pass. The verify script did pay a queue with a later loss. |
-| A17 | Gap | Surfnet CLI is absent. Devnet RPC answers and the genesis matches. Rechecked 2026-10-12T00:54:43Z: admin and the spare deployer are both 0 lamports. No Helius or QuickNode key in the environment. Faucet paths were not retried this round. No program was deployed. Collateral is dUSD, not mainnet USDC. |
-| A18 | Local | SOL/USD only. |
-| A19 | Partial | Role is Pyth mid, then fixture when the publish time is outside the desk window. Hermes and the Pyth benchmark return 401 without `PYTH_API_KEY`. The desk reads sponsored account `7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE` on devnet and pushes that SOL/USD number. The fixture at 100 is provisional when that read fails. There is still no Hermes key and no public price transaction. |
-| F1 | Local config | `app/config/networks.json` plus `SCARDESK_NETWORK` and `SCARDESK_RPC`. Mainnet is refused unless `SCARDESK_ALLOW_MAINNET=1`. The running desk is still localnet. See `HOW-TO-RUN.md`. |
-| F2 | Written | `README.md` points here. `HOW-TO-RUN.md` covers the validator, the three wallet buttons, Mine, the ticket guard, and the env switches. `docs/index.html` is a read-only blotter. `PITCH.md` is the spoken draft. Not recorded. |
-| F3 | Local only | The wallet loop was clicked on localnet. It was not repeated on devnet or Surfnet, because the program is not there. |
+| A1 | Devnet open, local settlement | No order book. The browser key opened a 2× long on Devnet. That close did not confirm (RPC 429). Older local closes still settled against the LP and the FIFO queue. |
+| A2 | Local close, Devnet open | One fill, full close, no margin top-up. Ticket copy matches. The Devnet 2× was not closed in this pass. |
+| A3 | Devnet | `params.json` and the live desk account are max leverage 1001. Alice position 2 is a 1001× long, still open, liq 99.95004996. This pass did not call `set_max_leverage` and did not roll it back to 1000. |
+| A4 | Devnet visible, path local | Bob's closed Devnet long shows −80 and 8000 SCAR. The step-by-step queue payment was the local browser loss. This pass did not close a new loss. |
+| A5 | Devnet visible | SCAR supply on the desk is 8000. Bob's closed row shows 8000. Public mint: `4cM4cQMmFJnwebQ9LKEh3L1YzWoMjuHz6jYC1Dtjva7DyB12sjGDy32umSHsfukTwgD2QZ9DA5Sp3RTUaHiwEeUu`. No `mint_free`. This browser key did not mint new SCAR. |
+| A6 | Devnet visible | Queue index 0 is Alice profit 18 at the head. Index 1 is Alice profit 98. Alice's distance read "0 ahead · 0 dUSD". This pass did not append a node. |
+| A7 | Local, not re-clicked | `fundFrom: queued` is in the program and the verify script. Devnet opens this pass used balance. |
+| A8 | Devnet, earlier click | Alice session withdraw toasted "Session key rejected. It can trade. It cannot withdraw, stake, or claim." Balance stayed 479. Screenshot `app/demo/browser/devnet-session-reject.png`. Not repeated after the RPC heated up. |
+| A9 | Local | Tool list unchanged. This Devnet pass did not click the agent tools. |
+| A10 | Devnet open | The wallet open uses the same prepare/send path as `client.open`. Signature `5JbCwfY99dNk4ZfKGeGWrmBHLMvsGhX5Z793RBGExrmG8F9bQaKhFMSetwiZNNaUWCdpFc1T7tJvjhidWcCTU6V5`. |
+| A11 | Devnet | Public explorer transactions exist: queue write, SCAR mint, `set_max_leverage`, the 1001× open (`app/demo/public-proof.json`, `app/demo/leverage-1001.json`), plus this pass's deposit and 2× open. |
+| A12 | Devnet layout | Account, ticket, queue, positions, and SCAR are one desk. At 390px the header, wallets, banner, and account stack. A full 720px card remeasure was not repeated. |
+| A13 | Devnet toasts | Margin, leverage 1002, RPC 429, missing Phantom, missing Solflare, and disconnect all use plain sentences. The open button stays clickable and toasts instead of sending. A new SCAR-mint toast was not produced this pass. |
+| A14 | Held | Copy is synthetic perps, loss-funded LP, FIFO. The page does not say paper-trading simulator or Alpaca. |
+| A15 | Local measurement | Red `#ff2418` up and ash `#8a847f` down were measured on the local pass. This Devnet pass showed an up tick in red. Not a pixel copy. |
+| A16 | Devnet visible, not re-settled | Bob's 8000 SCAR and Alice's unpaid queue are on the live blotter. The browser key's 2× is still open, about flat to a tiny profit, so it neither minted nor queued. |
+| A17 | Devnet deployed, Surfnet absent | Program is on Devnet (IX 17 demo_faucet upgraded). Surfnet CLI still missing. Collateral is dUSD. Public Pages faucet is permissionless (proof in `app/demo/faucet-proof.json`). No Helius or QuickNode key. |
+| A18 | Partial (desk) | SOL/USD + BTC/USD + ETH/USD switcher on desk. SOL settles on Devnet desk PDA. BTC/ETH marks+chart+desk-book; **not** separate on-chain market PDAs yet. Screenshots in `app/demo/browser/multimarket-*.png`. |
+| A19 | Partial | Sponsored Pyth account reads and clock-stamped pushes landed (operator log prefixes `TFSVgeFHXNKA`, `TCRdwP6z5JF7`, and others). Hermes and benchmarks stay 401 without `PYTH_API_KEY`. Fixture 100 remains the fallback when that read fails. |
+| F1 | Devnet running | `networks.json`, `SCARDESK_NETWORK`, `SCARDESK_RPC`. `npm run desk:devnet` reads `deployment.devnet.json`. Mainnet stays refused unless `SCARDESK_ALLOW_MAINNET=1`. The process on port 8787 was devnet when this was written. |
+| F2 | Written | `README.md` has the three-step open. `HOW-TO-RUN.md` has the switch, the clone steps, and the 429 behavior. `docs/index.html` is the read-only blotter. `scripts/export-pages.sh` checks it and does not push. |
+| F3 | Devnet, incomplete close | Faucet, deposit, and 2× open were clicked on Devnet. Close of that position returned 429 and stayed open. Not repeated on Surfnet. |
 | F4 | Held | No Hyperliquid or HyperEVM fork. No pixel copy. No mainnet USDC. |
-| F5 | Not submitted | 10-12 iteration is this tree. Submit waits for an explicit user nod. Deadline target remains about 2026-10-13 14:59 HKT. |
+| F5 | Not submitted | This tree was not submitted. Submit waits for an explicit user nod. |
 
 Provisional parameter deltas B1–B10 stay in the README table. They are implemented as documented there. B1's live Hermes pull is still closed. The sponsored Pyth account read is the public substitute and is labeled as such.
+

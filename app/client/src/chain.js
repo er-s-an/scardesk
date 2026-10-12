@@ -15,7 +15,6 @@ const {
   Transaction,
   TransactionInstruction,
   ComputeBudgetProgram,
-  sendAndConfirmTransaction,
 } = require("@solana/web3.js");
 
 const math = require("./math");
@@ -43,6 +42,8 @@ const IX = {
   stake: 13,
   unstake: 14,
   claim: 15,
+  setMaxLeverage: 16,
+  demoFaucet: 17,
 };
 
 function loadKey(name) {
@@ -125,7 +126,7 @@ class DeskClient {
       }
     }
     if (this.prepareOnly) {
-      const latest = await this.connection.getLatestBlockhash("confirmed");
+      const latest = await withBackoff(() => this.connection.getLatestBlockhash("confirmed"));
       tx.recentBlockhash = latest.blockhash;
       if (uniq.length) tx.partialSign(...uniq);
       const prepared = Buffer.from(
@@ -134,13 +135,13 @@ class DeskClient {
       return { sig: null, logs: [], prepared };
     }
     try {
-      const sig = await sendAndConfirmTransaction(this.connection, tx, uniq, {
-        commitment: "confirmed",
+      // -32029 is refused before the node accepts the transaction, so a retry does not double-submit.
+      const sig = await withBackoff(() => this.connection.sendTransaction(tx, uniq, {
         preflightCommitment: "confirmed",
         skipPreflight: !!this.skipPreflight,
-      });
-      const logs = await this.logsOf(sig);
-      return { sig, logs };
+      }));
+      const landed = await this.pollConfirmed(sig);
+      return { sig, logs: landed?.meta?.logMessages || [] };
     } catch (err) {
       const logs = err.logs || [];
       const wrapped = new Error(err.message || "transaction failed");
@@ -168,6 +169,35 @@ class DeskClient {
     }
   }
 
+  async pollConfirmed(sig) {
+    const started = Date.now();
+    let wait = 1200;
+    while (Date.now() - started < 40000) {
+      try {
+        const tx = await this.connection.getTransaction(sig, {
+          commitment: "confirmed",
+          maxSupportedTransactionVersion: 0,
+        });
+        if (tx) {
+          if (tx.meta && tx.meta.err) {
+            const wrapped = new Error("Transaction failed on chain.");
+            wrapped.logs = tx.meta.logMessages || [];
+            wrapped.signature = sig;
+            throw wrapped;
+          }
+          return tx;
+        }
+      } catch (err) {
+        if (!isRateLimit(err)) throw err;
+        wait = Math.min(wait * 2, 8000);
+      }
+      await new Promise((r) => setTimeout(r, wait));
+    }
+    const err = new Error("The transaction was sent. The RPC has not confirmed it yet. Wait, then retry.");
+    err.signature = sig;
+    throw err;
+  }
+
   async logsOf(sig) {
     const tx = await this.connection.getTransaction(sig, {
       commitment: "confirmed",
@@ -177,13 +207,13 @@ class DeskClient {
   }
 
   async clock() {
-    const info = await this.connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY);
+    const info = await withBackoff(() => this.connection.getAccountInfo(SYSVAR_CLOCK_PUBKEY));
     if (!info) throw new Error("clock sysvar missing");
     return info.data.readBigInt64LE(32);
   }
 
   async raw(pubkey) {
-    return this.connection.getAccountInfo(pubkey);
+    return withBackoff(() => this.connection.getAccountInfo(pubkey));
   }
 
   async readDesk() {
@@ -232,29 +262,55 @@ class DeskClient {
     return layout.tokenAmount(info.data);
   }
 
-  async snapshot(owners) {
-    const desk = await this.readDesk();
-    const oracle = desk ? await this.readOracle() : null;
-    const now = await this.clock();
-    const price = desk && oracle ? math.resolvePrice(desk, oracle, now) : null;
-    const users = {};
-    const positions = [];
-    for (const owner of owners) {
-      const key = owner instanceof PublicKey ? owner : new PublicKey(owner);
-      const user = await this.readUser(key);
-      users[key.toBase58()] = user;
-      if (!user) continue;
-      for (let id = 0n; id < user.nextId; id++) {
-        const pos = await this.readPosition(key, id);
-        if (pos) positions.push(pos);
-      }
+  async many(pubkeys) {
+    const out = [];
+    for (let i = 0; i < pubkeys.length; i += 100) {
+      const chunk = pubkeys.slice(i, i + 100);
+      const infos = await withBackoff(() => this.connection.getMultipleAccountsInfo(chunk));
+      out.push(...infos);
     }
+    return out;
+  }
+
+  async snapshot(owners) {
+    const keys = owners.map((owner) => (owner instanceof PublicKey ? owner : new PublicKey(owner)));
+    const headKeys = [this.desk, this.oracle, SYSVAR_CLOCK_PUBKEY, this.scarMint, this.vault];
+    for (const key of keys) headKeys.push(this.userPda(key));
+    const head = await this.many(headKeys);
+    const desk = head[0] ? layout.decodeDesk(head[0].data) : null;
+    const oracle = head[1] ? layout.decodeOracle(head[1].data) : null;
+    if (!head[2]) throw new Error("clock sysvar missing");
+    const now = head[2].data.readBigInt64LE(32);
+    const price = desk && oracle ? math.resolvePrice(desk, oracle, now) : null;
+    const scarSupply = head[3] ? layout.mintSupply(head[3].data) : 0n;
+    const vaultAmount = head[4] ? layout.tokenAmount(head[4].data) : 0n;
+    const users = {};
+    const posKeys = [];
+    keys.forEach((key, i) => {
+      const info = head[5 + i];
+      const user = info ? layout.decodeUser(info.data) : null;
+      users[key.toBase58()] = user;
+      if (!user) return;
+      for (let id = 0n; id < user.nextId; id++) posKeys.push(this.positionPda(key, id));
+    });
     const queue = [];
+    const queueFrom = posKeys.length;
     if (desk) {
-      for (let i = 0n; i < desk.queueTail; i++) {
-        const node = await this.readQueue(i);
-        if (node) queue.push(node);
-      }
+      for (let i = 0n; i < desk.queueTail; i++) posKeys.push(this.queuePda(i));
+    }
+    const tail = posKeys.length ? await this.many(posKeys) : [];
+    const positions = [];
+    for (let i = 0; i < queueFrom; i++) {
+      if (!tail[i]) continue;
+      const pos = layout.decodePosition(tail[i].data);
+      pos.pubkey = posKeys[i].toBase58();
+      positions.push(pos);
+    }
+    for (let i = queueFrom; i < posKeys.length; i++) {
+      if (!tail[i]) continue;
+      const node = layout.decodeQueue(tail[i].data);
+      node.pubkey = posKeys[i].toBase58();
+      queue.push(node);
     }
     return {
       now,
@@ -264,8 +320,8 @@ class DeskClient {
       users,
       positions,
       queue,
-      scarSupply: desk ? await this.scarSupply() : 0n,
-      vaultAmount: desk ? await this.vaultAmount() : 0n,
+      scarSupply: desk ? scarSupply : 0n,
+      vaultAmount: desk ? vaultAmount : 0n,
       addresses: {
         program: this.programId.toBase58(),
         desk: this.desk.toBase58(),
@@ -343,6 +399,21 @@ class DeskClient {
     return this.send(admin, [ix(this.programId, data, accounts)], []);
   }
 
+  /** Permissionless demo faucet: owner signs, fixed 1000 dUSD, 60s cooldown. */
+  async demoFaucet(owner) {
+    const ownerPk = owner.publicKey || owner;
+    const data = Buffer.from([IX.demoFaucet]);
+    const accounts = metas([
+      [ownerPk, 1, 1],
+      [this.userPda(ownerPk), 1, 0],
+      [this.desk, 0, 0],
+      [this.dusdMint, 1, 0],
+      [this.walletPda(ownerPk), 1, 0],
+      [TOKEN_PROGRAM_ID, 0, 0],
+    ]);
+    return this.send(owner, [ix(this.programId, data, accounts)], []);
+  }
+
   async deposit(owner, amount) {
     const data = Buffer.alloc(9);
     data[0] = IX.deposit;
@@ -414,6 +485,17 @@ class DeskClient {
     data[0] = IX.setFixture;
     data.writeBigInt64LE(math.bi(price), 1);
     data.writeInt32LE(-8, 9);
+    const accounts = metas([
+      [admin.publicKey, 1, 1],
+      [this.desk, 1, 0],
+    ]);
+    return this.send(admin, [ix(this.programId, data, accounts)], []);
+  }
+
+  async setMaxLeverage(admin, maxLeverage) {
+    const data = Buffer.alloc(3);
+    data[0] = IX.setMaxLeverage;
+    data.writeUInt16LE(maxLeverage, 1);
     const accounts = metas([
       [admin.publicKey, 1, 1],
       [this.desk, 1, 0],
@@ -637,6 +719,32 @@ function hasSessionReject(err) {
   return text.includes("session_reject") || text.includes("custom program error: 0x3");
 }
 
+function isRateLimit(err) {
+  const msg = String((err && err.message) || err || "");
+  return /too many requests|-32029|429 Too Many Requests|\bRPC 429\b/i.test(msg);
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A few spaced retries. web3's built-in 429 burst is left off (disableRetryOnRateLimit).
+async function withBackoff(fn, tries = 4) {
+  let wait = 900;
+  let last;
+  for (let i = 0; i < tries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      last = err;
+      if (!isRateLimit(err) || i === tries - 1) throw err;
+      await sleep(wait);
+      wait = Math.min(wait * 2, 5000);
+    }
+  }
+  throw last;
+}
+
 async function airdropIfNeeded(connection, pubkey, sol = 20) {
   const bal = await connection.getBalance(pubkey);
   if (bal > 2_000_000_000) return bal;
@@ -656,6 +764,8 @@ module.exports = {
   loadParams,
   eventsFromLogs,
   hasSessionReject,
+  isRateLimit,
+  withBackoff,
   airdropIfNeeded,
   Connection,
   PublicKey,

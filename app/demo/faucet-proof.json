@@ -1,0 +1,14 @@
+{
+  "ok": true,
+  "at": "2026-10-12T05:55:46.564Z",
+  "network": "devnet",
+  "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "freshOwner": "ARLfRT3RgqEVcbemWSo6CYELSmW4R9wes55QXkRCTYEc",
+  "fund": "yR5CHJm6ZEUSCiRxkestxxEP3CmkMPLwLnDfWpcomeYfznPrEN2WiKksFR2PRJzVHwJDwBT2CZ4BWzfs1d7gydF",
+  "initUser": "3KgEV6CDQS21F8adgpJwh8pf3owqLdnv1n6MkJqJf3pxx5To5ARzHWxxw4vxD9JriVf1Xssd3K54inBuNeKEVmtX",
+  "initWallet": "5B24RmU9ijHR9PSxHAAhdkLTZq2deoYpsdqcebj9pr1NGDFE3pMe69vHtcdKJFxbGu4MqBGhxHdTWxG3YQ73B9UT",
+  "demoFaucet": "4Yti6HKc6D6erGDeTUJgdj9MXWq9LWD81qFeNMiDJUUHFYXRVrHmqa28NcLFUrptQxB5GLo8Wek1RnzNGcJCWhL6",
+  "walletDusdMicro": "1000000000",
+  "explorer": "https://explorer.solana.com/tx/4Yti6HKc6D6erGDeTUJgdj9MXWq9LWD81qFeNMiDJUUHFYXRVrHmqa28NcLFUrptQxB5GLo8Wek1RnzNGcJCWhL6?cluster=devnet",
+  "note": "Permissionless IX 17 demo_faucet: 1000 dUSD, 60s cooldown. No admin signature."
+}
