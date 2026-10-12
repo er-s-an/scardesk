@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Scardesk — Devnet signed trades in the browser. Real signatures. Not mainnet.">
+  <meta name="description" content="Scardesk — Devnet signed SOL/USD trades in the browser. Real signatures. Not mainnet.">
   <title>Scardesk — Devnet Trade</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,40 +11,18 @@
   <link rel="stylesheet" href="styles.css">
   <style>
     body[data-busy="1"] { cursor: progress; }
-    body[data-busy="1"] button:not(.lang-switch button) { opacity: 0.7; pointer-events: none; }
-    .markets { display: flex; gap: 4px; margin-top: 6px; }
-    .markets button { min-height: 32px; padding: 4px 10px; }
-    .markets button.on { background: var(--up); color: var(--up-ink); }
-    #tx-log { list-style: none; margin: 0; padding: 0; max-height: 180px; overflow: auto; }
-    #tx-log li { padding: 4px 0; border-bottom: 1px solid var(--line); font-size: var(--text-xs); }
-    #tx-log a { color: var(--up-ink); }
-    .toast[data-tone="ok"] { border-color: var(--up); }
-    .toast[data-tone="wait"] { border-color: var(--ash); }
-    .up { color: var(--up); }
-    .dn { color: var(--ash); }
-    .banner-trade { border-left: 3px solid var(--up); }
-    .gap-note { border: 1px solid var(--line); padding: 10px 12px; background: var(--paper); margin: 0 0 12px; }
-    .mono { font-family: var(--mono); }
-    table.pos { width: 100%; border-collapse: collapse; font-size: var(--text-xs); }
-    table.pos th, table.pos td { text-align: left; padding: 6px 4px; border-bottom: 1px solid var(--line); }
-    .nav-switch { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .nav-switch a { color: var(--up-ink); }
+    body[data-busy="1"] button:not(.lang-switch button) { opacity: 0.72; pointer-events: none; }
   </style>
 </head>
-<body>
+<body class="trade">
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <header class="mast">
     <div class="brand">
       <span class="mark" aria-hidden="true"></span>
       <div>
-        <p class="eyebrow" id="market-eyebrow">SOL/USD 交易台</p>
+        <p class="eyebrow" id="market-eyebrow">SOL/USD · Devnet</p>
         <h1>Scardesk</h1>
-        <nav class="markets" id="markets" role="tablist" aria-label="Market">
-          <button type="button" role="tab" data-market="SOL/USD" class="on" aria-selected="true">SOL</button>
-          <button type="button" role="tab" data-market="BTC/USD" aria-selected="false">BTC</button>
-          <button type="button" role="tab" data-market="ETH/USD" aria-selected="false">ETH</button>
-        </nav>
       </div>
     </div>
     <div class="quote">
@@ -54,7 +32,6 @@
         <span id="src" class="pill">—</span>
         <span id="delta" class="delta">—</span>
       </div>
-      <p class="fine px-note" id="px-note">—</p>
     </div>
     <div class="who-col">
       <div class="lang-switch" role="group" aria-label="Language">
@@ -67,79 +44,105 @@
         <button type="button" id="btn-burner" data-i18n="browserKey">浏览器密钥</button>
         <button type="button" id="btn-disconnect" hidden data-i18n="disconnect">断开</button>
       </div>
-      <p class="mobile-wallet-hint" data-i18n="mobileHint">手机：点 Phantom/Solflare 会尝试打开钱包 App；也可在钱包内置浏览器打开本页，或用「浏览器密钥」。</p>
       <p class="link-state" id="link-state" data-phase="idle" data-i18n="idle">未连接 · Devnet</p>
-      <p class="fine nav-switch">
-        <a href="index.html" data-i18n="preview">只读预览</a>
-        · <button type="button" id="btn-refresh" class="ghost" data-i18n="refresh">刷新</button>
-      </p>
     </div>
   </header>
 
-  <div class="risk" role="note">
-    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin. maxLeverage <strong>1001</strong>. At 1001× a few bps liquidate the whole margin.</p>
+  <div class="trade-strip" role="status">
+    <span class="pill live">DEVNET</span>
+    <p id="next-step" class="next-step" data-i18n="nextConnect">下一步：连接钱包</p>
+    <span id="desk-meta" class="fine">—</span>
+    <a id="prog-link" href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener">Program</a>
+    <button type="button" id="btn-refresh" class="ghost" data-i18n="refresh">刷新</button>
   </div>
 
-  <div class="banner banner-trade" role="status">
-    <p class="banner-lead" data-i18n="banner">Devnet · 真实签名 · 非主网</p>
-    <p data-i18n="bannerBody">本页在浏览器内构建并发送交易，直连 OnFinality Devnet RPC。无本机 desk、无隧道。一键领水：钱包签名铸造 1000 demo dUSD（60 秒冷却）。</p>
-    <p class="fine">Program <a id="prog-link" href="https://explorer.solana.com/address/E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b?cluster=devnet" rel="noopener"><code>E7kH2K4Y…WXF4b</code></a> · <span id="desk-meta">—</span></p>
-  </div>
+  <details class="trade-risk">
+    <summary data-i18n="riskSum">合成永续 · 亏损进 LP 并铸造 SCAR · 盈利按 FIFO 排队 · 非主网</summary>
+    <p data-i18n="riskBody">孤立保证金，一次开满、一次平完，不能加仓。1001 倍时价格只要动几个基点，整笔保证金就会被清算。这是 Devnet 演示，钱包签的是真交易，不是主网资金。</p>
+  </details>
 
-  <p id="next-step" class="next-step" data-i18n="nextConnect">下一步：连接 Phantom / Solflare / 浏览器密钥</p>
-
-  <main>
-    <section class="panel" id="account" aria-labelledby="account-h">
-      <header class="ph">
-        <h2 id="account-h" data-i18n="account">账户</h2>
-        <span class="pill">wallet</span>
+  <main class="trade-grid">
+    <section class="panel" id="chart" aria-labelledby="chart-h">
+      <header class="ph chart-ph">
+        <div class="chart-title">
+          <h2 id="chart-h" data-i18n="chart">走势</h2>
+          <span class="pill live">LIVE</span>
+          <span class="pill">SOL/USD</span>
+        </div>
+        <p class="fine" id="chart-meta"></p>
       </header>
-      <dl class="stats">
-        <div><dt data-i18n="balance">余额</dt><dd id="bal">—</dd></div>
-        <div><dt data-i18n="walletHold">钱包 dUSD</dt><dd id="wallet-dusd">—</dd></div>
-        <div><dt data-i18n="queued">排队中</dt><dd id="queued">—</dd></div>
-        <div><dt data-i18n="opens">持仓数</dt><dd id="opens">—</dd></div>
-      </dl>
-      <p class="fine" id="who">—</p>
-      <div class="gap-note">
-        <p class="fine" data-i18n="faucetGap">领水为链上无权限 demo faucet：连接钱包后点「领水 1000 dUSD」，签名即铸造。60 秒冷却。Fee SOL 请用 faucet.solana.com。</p>
+      <div class="chart-wrap">
+        <canvas id="mark-chart" role="img" aria-label="SOL/USD mark sampled this session"></canvas>
+        <p id="chart-empty" class="chart-empty" data-i18n="chartEmpty">正在读取标记价…</p>
       </div>
-      <div class="row">
-        <label>dUSD<input id="cash-amt" inputmode="decimal" value="100"></label>
-        <button type="button" id="btn-deposit" data-i18n="deposit">入金</button>
-        <button type="button" id="btn-withdraw" data-i18n="withdraw">出金</button>
-      </div>
-      <div class="row">
-        <button type="button" id="btn-faucet" class="ghost" data-i18n="faucet">领水 1000 dUSD</button>
-        <button type="button" id="btn-sol" class="ghost" data-i18n="feeSol">领 Fee SOL</button>
-      </div>
+      <p class="fine" id="chart-note" data-i18n="chartNote">红线是这次打开页面后采到的 SOL 标记，不是历史 K 线。灰虚线是按当前保证金和杠杆算出的清算价。</p>
     </section>
 
     <section class="panel" id="ticket" aria-labelledby="ticket-h">
       <header class="ph">
         <h2 id="ticket-h" data-i18n="ticket">下单</h2>
-        <span class="pill" id="ticket-market">SOL/USD · isolated</span>
+        <span class="pill" id="ticket-market">SOL/USD · 链上</span>
       </header>
+
+      <ol class="steps" id="steps">
+        <li data-step="connect"><b>1</b><em data-i18n="stepConnect">连接</em></li>
+        <li data-step="need-sol"><b>2</b><em data-i18n="stepSol">Fee SOL</em></li>
+        <li data-step="faucet"><b>3</b><em data-i18n="stepFaucet">领水</em></li>
+        <li data-step="deposit"><b>4</b><em data-i18n="stepDeposit">入金</em></li>
+        <li data-step="open"><b>5</b><em data-i18n="stepOpen">开仓</em></li>
+      </ol>
+
+      <div id="connect-row" class="connect-row">
+        <button type="button" data-connect="phantom">Phantom</button>
+        <button type="button" data-connect="solflare">Solflare</button>
+        <button type="button" data-connect="burner" class="primary" data-i18n="browserKey">浏览器密钥</button>
+        <p class="fine" data-i18n="connectHint">没有钱包扩展时用浏览器密钥。密钥只留在这台浏览器，只签 Devnet。</p>
+        <p class="fine mobile-wallet-hint" data-i18n="mobileHint">手机：Phantom / Solflare 会尝试打开钱包 App。也可以在钱包自带浏览器里打开本页。</p>
+      </div>
+
       <div class="sides" role="group" aria-label="Side">
         <button type="button" id="side-long" class="side on" data-side="long" data-i18n="long">做多</button>
         <button type="button" id="side-short" class="side" data-side="short" data-i18n="short">做空</button>
       </div>
+
       <div class="ticket-grid">
-        <label data-i18n-label="margin">Margin dUSD
-          <input id="margin" inputmode="decimal" value="10">
+        <label><span data-i18n="margin">保证金 dUSD</span>
+          <input id="margin" inputmode="decimal" value="10" autocomplete="off">
         </label>
-        <label data-i18n-label="leverage">Leverage
-          <input id="lev" type="number" min="1" max="1001" value="5">
+        <label><span data-i18n="leverage">杠杆</span>
+          <input id="lev" type="number" min="1" max="1001" step="1" value="5">
         </label>
-        <label data-i18n-label="fundFrom">Fund from
+      </div>
+      <div class="lev-chips" role="group" aria-label="Leverage presets">
+        <button type="button" data-lev="2">2×</button>
+        <button type="button" data-lev="5" class="on">5×</button>
+        <button type="button" data-lev="10">10×</button>
+        <button type="button" data-lev="25">25×</button>
+        <button type="button" data-lev="50">50×</button>
+        <button type="button" data-lev="100">100×</button>
+        <button type="button" data-lev="1001" class="hot">1001×</button>
+      </div>
+
+      <div class="row" id="fund-row" hidden>
+        <label><span data-i18n="fundFrom">资金来源</span>
           <select id="fund">
-            <option value="balance" data-i18n="fromBal">balance</option>
-            <option value="queued" data-i18n="fromQ">queued</option>
+            <option value="balance" data-i18n="fromBal">余额</option>
+            <option value="queued" data-i18n="fromQ">排队债权</option>
           </select>
         </label>
       </div>
+
+      <div class="quote-preview" id="quote-preview">
+        <div><span data-i18n="notional">名义价值</span><strong id="prev-notional">—</strong></div>
+        <div><span data-i18n="liq">清算价</span><strong id="prev-liq">—</strong></div>
+        <div class="span"><span data-i18n="dist">距离清算</span><strong id="prev-dist">—</strong></div>
+      </div>
+      <p class="fine warn" id="lev-warn" hidden></p>
       <p class="fine" id="market-note"></p>
-      <button type="button" id="btn-open" data-i18n="open">开仓</button>
+      <p class="fine" id="px-note" hidden></p>
+
+      <button type="button" id="btn-open" class="primary" data-side="long" hidden>开多</button>
+      <p class="fine" id="go-reason"></p>
     </section>
 
     <section class="panel" id="positions" aria-labelledby="pos-h">
@@ -147,29 +150,67 @@
         <h2 id="pos-h" data-i18n="positions">持仓</h2>
         <span class="pill">SOL/USD</span>
       </header>
-      <div style="overflow:auto">
+      <div class="scroll">
         <table class="pos">
           <thead>
-            <tr><th>#</th><th>side</th><th>lev</th><th>margin</th><th>notional</th><th>entry</th><th>uPnL</th><th></th></tr>
+            <tr>
+              <th data-i18n="thSide">方向</th>
+              <th data-i18n="thLev">杠杆</th>
+              <th data-i18n="thMargin">保证金</th>
+              <th data-i18n="thEntry">开仓价</th>
+              <th data-i18n="thUpnl">浮盈</th>
+              <th data-i18n="thLiq">清算价</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody id="pos-body">
-            <tr><td colspan="8" class="fine">—</td></tr>
+            <tr class="empty"><td colspan="7" class="fine">—</td></tr>
           </tbody>
         </table>
       </div>
     </section>
 
+    <section class="panel" id="account" aria-labelledby="account-h">
+      <header class="ph">
+        <h2 id="account-h" data-i18n="account">资金</h2>
+        <span class="pill" id="sol-pill">— SOL</span>
+      </header>
+      <div class="account-layout">
+        <dl class="stats">
+          <div><dt data-i18n="balance">Desk 余额</dt><dd id="bal">—</dd></div>
+          <div><dt data-i18n="walletHold">钱包 dUSD</dt><dd id="wallet-dusd">—</dd></div>
+          <div><dt data-i18n="queued">排队中</dt><dd id="queued">—</dd></div>
+          <div><dt data-i18n="opens">持仓数</dt><dd id="opens">—</dd></div>
+        </dl>
+        <div class="account-actions">
+          <p class="fine" id="who">—</p>
+          <div class="row">
+            <label><span data-i18n="amount">金额</span>
+              <input id="cash-amt" inputmode="decimal" value="100" autocomplete="off">
+            </label>
+            <button type="button" id="btn-deposit" data-i18n="deposit">入金</button>
+            <button type="button" id="btn-withdraw" class="ghost" data-i18n="withdraw">出金</button>
+          </div>
+          <div class="row">
+            <button type="button" id="btn-faucet" class="ghost" data-i18n="faucet">领水 1000 dUSD</button>
+            <button type="button" id="btn-sol" class="ghost" data-i18n="feeSol">领 Fee SOL</button>
+          </div>
+          <p class="fine" data-i18n="faucetGap">领水会让钱包签一笔链上铸造，60 秒一次，进的是钱包而不是仓位。入金后才能开仓。Fee SOL 在 faucet.solana.com。</p>
+        </div>
+      </div>
+    </section>
+
     <section class="panel" id="log-panel" aria-labelledby="log-h">
       <header class="ph">
-        <h2 id="log-h">Tx</h2>
-        <span class="pill">explorer</span>
+        <h2 id="log-h" data-i18n="tx">成交</h2>
+        <a href="index.html" data-i18n="preview">只读预览</a>
       </header>
       <ul id="tx-log"><li class="fine">—</li></ul>
     </section>
   </main>
 
-  <footer class="fine" style="padding: 16px; opacity: 0.7;">
-    Scardesk Pages trade · Architecture A (browser prepare+send) · no keys in repo · do not Submit
+  <footer class="fine">
+    <p data-i18n="footer">Scardesk · Devnet 演示 · 真实签名 · 非主网资金 · 与 papertrade.xyz 无关</p>
   </footer>
 
   <script src="scardesk-client.js"></script>

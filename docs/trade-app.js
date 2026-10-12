@@ -22,6 +22,8 @@
   let market = "SOL/USD";
   let busy = false;
   let log = [];
+  let ticks = [];
+  let previewLiq = null;
 
   const I18N = {
     zh: {
@@ -29,7 +31,7 @@
       bannerBody: "本页在浏览器内构建并发送交易，直连 OnFinality Devnet RPC。无本机 desk、无隧道。一键领水：钱包签名铸造 1000 demo dUSD（60 秒冷却）。",
       connect: "连接钱包",
       mark: "标记价",
-      account: "账户",
+      account: "资金",
       ticket: "下单",
       positions: "持仓",
       deposit: "入金",
@@ -38,6 +40,7 @@
       close: "平仓",
       faucet: "领水 1000 dUSD",
       feeSol: "领 Fee SOL",
+      browserKey: "浏览器密钥",
       long: "做多",
       short: "做空",
       balance: "余额",
@@ -54,11 +57,13 @@
       preview: "只读预览",
       faucetGap: "领水为链上无权限 demo faucet：连接钱包后点「领水 1000 dUSD」，签名即铸造。60 秒冷却。Fee SOL 请用 faucet.solana.com。",
       feeSolHint: "Devnet SOL 请用 https://faucet.solana.com （本 RPC 拒绝 requestAirdrop）。",
-      nextConnect: "下一步：连接 Phantom / Solflare / 浏览器密钥",
-      mobileHint: "手机：点 Phantom/Solflare 会尝试打开钱包 App；也可在钱包内置浏览器打开本页，或用「浏览器密钥」。",
-      nextFaucet: "下一步：点「领水 1000 dUSD」，签名后入金",
-      nextDeposit: "下一步：入金 dUSD 到 desk",
-      nextOpen: "下一步：开仓 SOL/USD",
+      nextConnect: "下一步：连接钱包。没有扩展就用浏览器密钥。",
+      mobileHint: "手机：点 Phantom / Solflare 会尝试打开钱包 App。也可以在钱包自带浏览器里打开本页。",
+      nextSol: "下一步：领取 Devnet Fee SOL（至少 0.02），然后回来刷新。",
+      nextSetup: "下一步：正在把这个钱包登记到 desk。",
+      nextFaucet: "下一步：领 1000 dUSD。签名后它在钱包里，还要入金。",
+      nextDeposit: "下一步：把钱包里的 dUSD 入金到 desk，然后才能开仓。",
+      nextOpen: "下一步：确认名义价值和清算价，然后开仓。",
       idle: "未连接 · Devnet",
       needSol: "Devnet SOL 不足（需 ≥0.02）。请先打开 faucet.solana.com 领 Fee SOL，再连接。",
       wrongNet: "钱包似乎在主网/非 Devnet。请在 Phantom/Solflare 切换到 Devnet 后再试。",
@@ -67,14 +72,58 @@
       mobileWallet: "手机请用钱包内置浏览器打开本页，或安装 Phantom / Solflare。",
       browserKeyHint: "无扩展时可用「浏览器密钥」（本机生成，仅 Devnet 演示）。",
       loading: "读取 desk…",
-      notOnChain: "BTC/ETH 标记可读；开仓仅 SOL/USD 上链。",
+      notOnChain: "此页只结算 SOL/USD。",
+      chart: "走势",
+      chartEmpty: "正在读取标记价…",
+      chartNote: "红线是这次打开页面后采到的 SOL 标记，不是历史 K 线。灰虚线是按当前保证金和杠杆算出的清算价。",
+      chartWait: "标记刚到。多停一会，红线会沿这次会话往右长。",
+      riskSum: "合成永续 · 亏损进 LP 并铸造 SCAR · 盈利按 FIFO 排队 · 非主网",
+      riskBody: "孤立保证金，一次开满、一次平完，不能加仓。1001 倍时价格只要动几个基点，整笔保证金就会被清算。这是 Devnet 演示，钱包签的是真交易，不是主网资金。",
+      stepConnect: "连接",
+      stepSol: "Fee SOL",
+      stepFaucet: "领水",
+      stepDeposit: "入金",
+      stepOpen: "开仓",
+      connectHint: "没有钱包扩展时用浏览器密钥。密钥只留在这台浏览器，只签 Devnet。",
+      notional: "名义价值",
+      liq: "清算价",
+      dist: "距离清算",
+      amount: "金额",
+      tx: "成交",
+      footer: "Scardesk · Devnet 演示 · 真实签名 · 非主网资金 · 与 papertrade.xyz 无关",
+      thSide: "方向",
+      thLev: "杠杆",
+      thMargin: "保证金",
+      thEntry: "开仓价",
+      thUpnl: "浮盈",
+      thLiq: "清算价",
+      noPos: "还没有仓。入金之后再开第一笔。",
+      goLong: "开多",
+      goShort: "开空",
+      goSol: "领取 Fee SOL",
+      goFaucet: "领水 1000 dUSD",
+      goDeposit: "入金到 desk",
+      goSetup: "登记到 desk",
+      reasonConnect: "先连接。浏览器密钥不需要安装扩展。",
+      reasonSol: "开仓要付 Devnet 手续费。领到 SOL 后点刷新。",
+      reasonFaucet: "Desk 和钱包都还没有 dUSD。",
+      reasonDeposit: "dUSD 还在钱包里。入金后才会变成可开仓余额。",
+      reasonOpen: "开仓价用当前标记。平仓在持仓表里。",
+      reasonSetup: "这个钱包还没在 desk 上建账户。",
+      levWarn: "100 倍以上：价格稍微反向，整笔保证金就没了。",
+      levExtreme: "1001 倍：大约几个基点就会清算。这是产品上限，不是默认。",
+      ticketChain: "SOL/USD · 链上",
+      eyebrow: "SOL/USD · Devnet",
+      pythNote: "链上 Pyth",
+      flatNote: "红 = 涨",
+      chartSample: "本次会话采样",
     },
     en: {
       banner: "Devnet · real signatures · not mainnet",
       bannerBody: "This page builds and sends transactions in the browser against OnFinality Devnet RPC. No local desk, no tunnel. One-click faucet: wallet signs a 1000 demo dUSD mint (60s cooldown).",
       connect: "Connect wallet",
       mark: "Mark",
-      account: "Account",
+      account: "Funds",
       ticket: "Ticket",
       positions: "Positions",
       deposit: "Deposit",
@@ -83,12 +132,13 @@
       close: "Close",
       faucet: "Faucet 1000 dUSD",
       feeSol: "Fee SOL",
+      browserKey: "Browser key",
       long: "Long",
       short: "Short",
       balance: "Balance",
       walletHold: "Wallet dUSD",
       queued: "Queued",
-      opens: "Open",
+      opens: "Pos.",
       margin: "Margin dUSD",
       leverage: "Leverage",
       fundFrom: "Fund from",
@@ -99,11 +149,13 @@
       preview: "Read-only preview",
       faucetGap: "On-chain permissionless demo faucet: connect, click Faucet 1000 dUSD, sign. 60s cooldown. Fee SOL from faucet.solana.com.",
       feeSolHint: "Get Devnet SOL from https://faucet.solana.com (this RPC refuses requestAirdrop).",
-      nextConnect: "Next: connect Phantom / Solflare / Browser key",
-      mobileHint: "Phone: Phantom/Solflare opens the wallet app when possible. Or open this page in the in-wallet browser, or use Browser key.",
-      nextFaucet: "Next: click Faucet 1000 dUSD, sign, then deposit",
-      nextDeposit: "Next: deposit dUSD onto the desk",
-      nextOpen: "Next: open a SOL/USD position",
+      nextConnect: "Next: connect a wallet. No extension? Use the browser key.",
+      mobileHint: "Phone: Phantom / Solflare tries to open the wallet app. You can also open this page in the wallet's browser.",
+      nextSol: "Next: get Devnet fee SOL (at least 0.02), then come back and refresh.",
+      nextSetup: "Next: registering this wallet on the desk.",
+      nextFaucet: "Next: faucet 1000 dUSD. After you sign, it sits in the wallet — then deposit.",
+      nextDeposit: "Next: deposit wallet dUSD onto the desk. Only then can you open.",
+      nextOpen: "Next: check notional and liquidation, then open.",
       idle: "Not connected · Devnet",
       needSol: "Not enough Devnet SOL (≥0.02 needed). Open faucet.solana.com for fee SOL, then reconnect.",
       wrongNet: "Wallet looks like mainnet / not Devnet. Switch Phantom/Solflare to Devnet and retry.",
@@ -112,7 +164,51 @@
       mobileWallet: "On mobile, open this page inside your wallet browser, or install Phantom / Solflare.",
       browserKeyHint: "No extension? Use Browser key (local Devnet demo key).",
       loading: "Reading desk…",
-      notOnChain: "BTC/ETH marks are readable; only SOL/USD opens settle on-chain.",
+      notOnChain: "This page settles SOL/USD only.",
+      chart: "Chart",
+      chartEmpty: "Reading the mark…",
+      chartNote: "The red line is the SOL mark sampled since you opened this page, not history. The gray dash is liquidation at the margin and leverage you typed.",
+      chartWait: "Mark just arrived. Stay on the page and the line grows with this session.",
+      riskSum: "Synthetic perps · losses fund the LP and mint SCAR · wins wait in FIFO · not mainnet",
+      riskBody: "Isolated margin. One fill, full close, no top-up. At 1001× a few basis points liquidate the whole margin. Devnet demo: the wallet signs real transactions. Not mainnet funds.",
+      stepConnect: "Connect",
+      stepSol: "Fee SOL",
+      stepFaucet: "Faucet",
+      stepDeposit: "Deposit",
+      stepOpen: "Open",
+      connectHint: "No wallet extension? Use the browser key. It stays in this browser and only signs Devnet.",
+      notional: "Notional",
+      liq: "Liquidation",
+      dist: "To liquidation",
+      amount: "Amount",
+      tx: "Fills",
+      footer: "Scardesk · Devnet demo · real signatures · not mainnet funds · not papertrade.xyz",
+      thSide: "Side",
+      thLev: "Lev",
+      thMargin: "Margin",
+      thEntry: "Entry",
+      thUpnl: "uPnL",
+      thLiq: "Liq",
+      noPos: "No position yet. Deposit, then open the first one.",
+      goLong: "Open long",
+      goShort: "Open short",
+      goSol: "Get fee SOL",
+      goFaucet: "Faucet 1000 dUSD",
+      goDeposit: "Deposit to desk",
+      goSetup: "Register on desk",
+      reasonConnect: "Connect first. The browser key needs no extension.",
+      reasonSol: "Opening needs Devnet SOL for fees. Refresh after the faucet.",
+      reasonFaucet: "No dUSD on the desk or in the wallet yet.",
+      reasonDeposit: "dUSD is still in the wallet. Deposit it before opening.",
+      reasonOpen: "Opens at the current mark. Close from the positions table.",
+      reasonSetup: "This wallet has no desk account yet.",
+      levWarn: "Above 100× a small move against you takes the whole margin.",
+      levExtreme: "1001× liquidates in a few basis points. That is the ceiling, not the default.",
+      ticketChain: "SOL/USD · on-chain",
+      eyebrow: "SOL/USD · Devnet",
+      pythNote: "On-chain Pyth",
+      flatNote: "Red = up",
+      chartSample: "This session",
     },
   };
 
@@ -389,6 +485,7 @@
       positions,
       addresses: raw.addresses,
     };
+    if (price && price.text) noteTick(Number(price.text));
     render();
     return snap;
   }
@@ -408,28 +505,32 @@
       return;
     }
     const raw = BigInt(snap.price.raw);
-    px.textContent = snap.price.text;
+    const hero = Number(snap.price.text);
+    px.textContent = Number.isFinite(hero)
+      ? hero.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+      : snap.price.text;
+    px.title = snap.price.text;
     const provisional = snap.price.source === "fixture";
     src.textContent = provisional
       ? (lang === "zh" ? "fixture · 暂定" : "fixture · provisional")
-      : (snap.price.source === "pyth" ? (lang === "zh" ? "pyth · 链上" : "pyth · on-chain") : snap.price.source);
+      : (snap.price.source === "pyth" ? t("pythNote") : snap.price.source);
     src.className = "pill " + snap.price.source;
     if (lastPx !== null && raw !== lastPx) {
       lastDir = raw > lastPx ? 1 : -1;
       const diff = raw - lastPx;
       delta.textContent = (diff > 0n ? "+" : "") + S().math.fmtPrice(diff);
     } else if (lastPx === null) {
-      delta.textContent = lang === "zh" ? "红=涨" : "red = up";
+      delta.textContent = t("flatNote");
     }
     lastPx = raw;
     const dir = lastDir === 1 ? "up" : lastDir === -1 ? "dn" : "";
     px.className = dir ? "q-px " + dir : "q-px";
     if (dir) delta.className = "delta " + dir;
-    note.textContent = snap.price.source === "pyth"
-      ? (lang === "zh"
-        ? "来自 Devnet 赞助 Pyth 账户写入的 desk oracle。非 Hermes 直连。"
-        : "From desk oracle (sponsored Pyth account on Devnet). Not a live Hermes stream.")
-      : (lang === "zh" ? "fixture 暂定标记。诚实标注。" : "Fixture mark — labeled honestly.");
+    if (note) {
+      note.textContent = snap.price.source === "pyth"
+        ? (lang === "zh" ? "Devnet 上的 Pyth 账户写入 desk，不是 Hermes 直连。" : "Desk oracle from a sponsored Pyth account. Not a Hermes stream.")
+        : (lang === "zh" ? "fixture 暂定标记。" : "Fixture mark.");
+    }
   }
 
   function renderAccount() {
@@ -439,7 +540,7 @@
       $("queued").textContent = "—";
       $("opens").textContent = "—";
       $("wallet-dusd").textContent = "—";
-      $("who").textContent = t("nextConnect");
+      $("who").textContent = lang === "zh" ? "连接后显示地址。" : "Address shows after you connect.";
       return;
     }
     $("bal").textContent = a.missing ? "—" : a.balance + " dUSD";
@@ -447,8 +548,14 @@
     $("opens").textContent = a.missing ? "—" : String(a.openCount);
     $("wallet-dusd").textContent = a.walletDusd + " dUSD";
     $("who").textContent = (a.missing
-      ? (lang === "zh" ? "账户尚未在 desk 上。连接后会自动初始化。" : "Not on desk yet. Connect will init.")
-      : "Owner " + short(a.pubkey)) + " · " + a.sol + " SOL";
+      ? (lang === "zh" ? "这个钱包还没在 desk 上。" : "Not on the desk yet.")
+      : short(a.pubkey)) + " · " + a.sol + " SOL";
+    const pill = $("sol-pill");
+    if (pill) pill.textContent = a.sol + " SOL";
+  }
+
+  function sideWord(sideName) {
+    return sideName === "long" ? t("long") : t("short");
   }
 
   function renderPositions() {
@@ -456,48 +563,270 @@
     const rows = (snap && snap.positions) || [];
     const open = rows.filter((p) => p.open);
     if (!open.length) {
-      body.innerHTML = `<tr><td colspan="8" class="fine">${lang === "zh" ? "无持仓" : "No open positions"}</td></tr>`;
+      body.innerHTML = `<tr class="empty"><td colspan="7" class="fine">${t("noPos")}</td></tr>`;
       return;
     }
-    body.innerHTML = open.map((p) => `
+    body.innerHTML = open.map((p) => {
+      const up = Number(p.upnl);
+      const upCls = Number.isFinite(up) && up < 0 ? "dn" : "up";
+      const sideCls = p.side === "long" ? "up" : "dn";
+      return `
       <tr>
-        <td>${p.id}</td>
-        <td class="${p.side === "long" ? "up" : "dn"}">${p.side}</td>
-        <td>${p.leverage}×</td>
-        <td>${p.margin}</td>
-        <td>${p.notional}</td>
-        <td>${p.entry}</td>
-        <td class="${Number(p.upnl) >= 0 ? "up" : "dn"}">${p.upnl}</td>
+        <td class="${sideCls}" data-label="${t("thSide")}">${sideWord(p.side)}</td>
+        <td data-label="${t("thLev")}">${p.leverage}×</td>
+        <td data-label="${t("thMargin")}">${p.margin}</td>
+        <td data-label="${t("thEntry")}">${p.entry}</td>
+        <td class="${upCls}" data-label="${t("thUpnl")}">${p.upnl}</td>
+        <td data-label="${t("thLiq")}">${p.liq}</td>
         <td><button type="button" data-close="${p.id}" class="ghost">${t("close")}</button></td>
-      </tr>`).join("");
+      </tr>`;
+    }).join("");
     body.querySelectorAll("[data-close]").forEach((btn) => {
       btn.addEventListener("click", () => closePos([btn.getAttribute("data-close")]));
     });
   }
 
+  function solOf(actor) {
+    if (!actor || actor.sol == null || actor.sol === "—") return NaN;
+    const n = Number(actor.sol);
+    return Number.isFinite(n) ? n : NaN;
+  }
+
+  function marginNeed() {
+    const n = Number(($("margin") && $("margin").value) || 0);
+    return Number.isFinite(n) && n > 0 ? n : 1;
+  }
+
+  function currentPhase() {
+    if (!walletAdapter || !walletAdapter.publicKey) return "connect";
+    const a = snap && snap.actor;
+    const sol = solOf(a);
+    if (Number.isFinite(sol) && sol < 0.02) return "need-sol";
+    if (!a || a.missing) return "setup";
+    const bal = Number(a.balance || 0);
+    const hold = Number(a.walletDusd || 0);
+    const need = marginNeed();
+    if (bal + 1e-9 < need && hold <= 0) return "faucet";
+    if (bal + 1e-9 < need && hold > 0) return "deposit";
+    return "open";
+  }
+
   function updateNext() {
     const el = $("next-step");
     if (!el) return;
-    if (!walletAdapter || !walletAdapter.publicKey) {
-      el.textContent = t("nextConnect");
+    const key = {
+      connect: "nextConnect",
+      "need-sol": "nextSol",
+      setup: "nextSetup",
+      faucet: "nextFaucet",
+      deposit: "nextDeposit",
+      open: "nextOpen",
+    }[currentPhase()];
+    el.textContent = t(key || "nextConnect");
+  }
+
+  function renderSteps() {
+    const ph = currentPhase();
+    const order = ["connect", "need-sol", "faucet", "deposit", "open"];
+    const idx = order.indexOf(ph === "setup" ? "need-sol" : ph);
+    document.querySelectorAll("#steps li").forEach((li) => {
+      const step = li.getAttribute("data-step");
+      const i = order.indexOf(step);
+      li.classList.toggle("now", step === ph || (ph === "setup" && step === "need-sol"));
+      li.classList.toggle("done", idx > -1 && i > -1 && i < idx);
+    });
+  }
+
+  function renderPreview() {
+    const notionalEl = $("prev-notional");
+    const liqEl = $("prev-liq");
+    const distEl = $("prev-dist");
+    const warn = $("lev-warn");
+    previewLiq = null;
+    if (!notionalEl || !liqEl || !distEl) return;
+    const math = S().math;
+    const lev = Number($("lev").value);
+    const marginText = ($("margin").value || "").trim();
+    const mark = snap && snap.price ? BigInt(snap.price.raw) : null;
+    const liqBps = (snap && snap.desk && snap.desk.liqFractionBps) || 5000;
+    const maxLev = (snap && snap.desk && snap.desk.maxLeverage) || 1001;
+    document.querySelectorAll(".lev-chips button").forEach((btn) => {
+      btn.classList.toggle("on", Number(btn.getAttribute("data-lev")) === lev);
+    });
+    if (warn) {
+      const hot = Number.isFinite(lev) && lev >= 100;
+      warn.hidden = !hot;
+      warn.textContent = lev >= 1000 ? t("levExtreme") : t("levWarn");
+    }
+    if (!mark || !/^\d+(\.\d+)?$/.test(marginText) || !Number.isFinite(lev) || lev < 1 || lev > maxLev) {
+      notionalEl.textContent = "—";
+      liqEl.textContent = "—";
+      distEl.textContent = "—";
+      drawChart();
       return;
     }
-    const a = snap && snap.actor;
-    if (!a || a.missing) {
-      el.textContent = t("nextConnect");
-      return;
+    try {
+      const micro = math.toMicro(marginText);
+      const notional = micro * BigInt(Math.trunc(lev));
+      const liq = math.calcLiq(side, mark, Math.trunc(lev), liqBps);
+      previewLiq = Number(math.fmtPrice(liq));
+      notionalEl.textContent = math.fmtMicro(notional) + " dUSD";
+      liqEl.textContent = math.fmtPrice(liq);
+      const entryN = Number(math.fmtPrice(mark));
+      const pct = entryN > 0 ? Math.abs(entryN - previewLiq) / entryN * 100 : 0;
+      const n = pct < 1 ? pct.toFixed(3) : pct.toFixed(2);
+      distEl.textContent = lang === "zh"
+        ? (side === "long" ? `下跌 ${n}% 则整笔保证金清算` : `上涨 ${n}% 则整笔保证金清算`)
+        : (side === "long" ? `${n}% drop liquidates the margin` : `${n}% rise liquidates the margin`);
+    } catch {
+      notionalEl.textContent = "—";
+      liqEl.textContent = "—";
+      distEl.textContent = "—";
     }
-    const bal = Number(a.balance || 0);
-    const hold = Number(a.walletDusd || 0);
-    if (bal <= 0 && hold <= 0) el.textContent = t("nextFaucet");
-    else if (bal <= 0 && hold > 0) el.textContent = t("nextDeposit");
-    else el.textContent = t("nextOpen");
+    drawChart();
+  }
+
+  function renderGo() {
+    const btn = $("btn-open");
+    const reason = $("go-reason");
+    const row = $("connect-row");
+    if (!btn) return;
+    const ph = currentPhase();
+    if (row) row.hidden = ph !== "connect";
+    btn.hidden = ph === "connect";
+    btn.dataset.phase = ph;
+    btn.dataset.side = side;
+    const copy = {
+      "need-sol": ["goSol", "reasonSol"],
+      setup: ["goSetup", "reasonSetup"],
+      faucet: ["goFaucet", "reasonFaucet"],
+      deposit: ["goDeposit", "reasonDeposit"],
+      open: [side === "long" ? "goLong" : "goShort", "reasonOpen"],
+    }[ph] || ["goLong", "reasonConnect"];
+    btn.textContent = t(copy[0]);
+    if (reason) reason.textContent = t(ph === "connect" ? "reasonConnect" : copy[1]);
+    const fundRow = $("fund-row");
+    if (fundRow) {
+      const queued = snap && snap.actor ? Number(snap.actor.queued || 0) : 0;
+      fundRow.hidden = !(queued > 0);
+    }
+    const eyebrow = $("market-eyebrow");
+    if (eyebrow) eyebrow.textContent = t("eyebrow");
+    const ticketMarket = $("ticket-market");
+    if (ticketMarket) ticketMarket.textContent = t("ticketChain");
+  }
+
+  function noteTick(price) {
+    if (!Number.isFinite(price) || price <= 0) return;
+    const now = Date.now();
+    const last = ticks[ticks.length - 1];
+    if (last && now - last.t < 15000 && last.c === price) return;
+    ticks.push({ t: now, c: price });
+    if (ticks.length > 240) ticks.shift();
+  }
+
+  function drawChart() {
+    const canvas = $("mark-chart");
+    const empty = $("chart-empty");
+    const meta = $("chart-meta");
+    if (!canvas) return;
+    const wrap = canvas.parentElement;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    const w = wrap.clientWidth;
+    const h = wrap.clientHeight;
+    if (w < 10 || h < 10) return;
+    canvas.width = Math.floor(w * dpr);
+    canvas.height = Math.floor(h * dpr);
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    const series = ticks;
+    if (empty) {
+      empty.hidden = series.length > 0;
+      if (!series.length) empty.textContent = snap && snap.price ? t("chartWait") : t("chartEmpty");
+    }
+    if (meta) {
+      meta.textContent = series.length
+        ? t("chartSample") + " · " + series.length
+        : "";
+    }
+    if (!series.length) return;
+    const pad = { l: 12, r: 78, t: 18, b: 16 };
+    const plotW = Math.max(10, w - pad.l - pad.r);
+    const plotH = Math.max(10, h - pad.t - pad.b);
+    const vals = series.map((p) => p.c);
+    if (previewLiq != null && Number.isFinite(previewLiq)) vals.push(previewLiq);
+    let lo = Math.min.apply(null, vals);
+    let hi = Math.max.apply(null, vals);
+    if (!(hi > lo)) {
+      lo *= 0.998;
+      hi *= 1.002;
+    }
+    const span = hi - lo || 1;
+    lo -= span * 0.12;
+    hi += span * 0.12;
+    const yOf = (v) => pad.t + ((hi - v) / (hi - lo)) * plotH;
+    const xOf = (i) => (series.length < 2 ? pad.l : pad.l + (i / (series.length - 1)) * plotW);
+    ctx.font = "11px 'IBM Plex Mono', ui-monospace, monospace";
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(58,41,39,0.95)";
+    ctx.fillStyle = "#A89A92";
+    for (let i = 0; i < 4; i++) {
+      const v = lo + ((hi - lo) * i) / 3;
+      const y = yOf(v);
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + plotW, y);
+      ctx.stroke();
+      ctx.fillText(v.toFixed(2), pad.l + plotW + 8, y + 4);
+    }
+    if (series.length >= 2) {
+      ctx.beginPath();
+      series.forEach((p, i) => {
+        const x = xOf(i);
+        const y = yOf(p.c);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      });
+      ctx.strokeStyle = "#FF2418";
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+      const lastX = xOf(series.length - 1);
+      ctx.lineTo(lastX, pad.t + plotH);
+      ctx.lineTo(xOf(0), pad.t + plotH);
+      ctx.closePath();
+      ctx.fillStyle = "rgba(255,36,24,0.12)";
+      ctx.fill();
+    } else {
+      const y = yOf(series[0].c);
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = "#FF2418";
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + plotW, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    if (previewLiq != null && Number.isFinite(previewLiq)) {
+      const y = yOf(previewLiq);
+      ctx.setLineDash([3, 4]);
+      ctx.strokeStyle = "#8A847F";
+      ctx.beginPath();
+      ctx.moveTo(pad.l, y);
+      ctx.lineTo(pad.l + plotW, y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#C8C2BC";
+      ctx.fillText((lang === "zh" ? "清算 " : "Liq ") + previewLiq.toFixed(2), pad.l + 8, Math.max(14, y - 6));
+    }
   }
 
   function renderDeskMeta() {
     const d = snap && snap.desk;
     $("desk-meta").textContent = d
-      ? `maxLeverage ${d.maxLeverage} · LP ${d.lp} · free ${d.freeLp} · fixture ${d.fixture}`
+      ? (lang === "zh"
+        ? `最高 ${d.maxLeverage}× · LP ${d.lp}`
+        : `Max ${d.maxLeverage}× · LP ${d.lp}`)
       : "—";
     $("prog-link").href = S().explorerAddr(DEP.programId);
     $("prog-link").textContent = short(DEP.programId);
@@ -508,6 +837,9 @@
     renderAccount();
     renderPositions();
     renderDeskMeta();
+    renderPreview();
+    renderGo();
+    renderSteps();
     updateNext();
     const on = !!(walletAdapter && walletAdapter.publicKey);
     $("btn-disconnect").hidden = !on;
@@ -520,9 +852,10 @@
     } else {
       setLink("idle", t("idle"));
     }
-    const solOnly = market === "SOL/USD";
-    $("btn-open").disabled = !on || !solOnly || busy;
-    $("market-note").textContent = solOnly ? "" : t("notOnChain");
+    if ($("btn-open")) $("btn-open").disabled = !!busy;
+    if ($("market-note")) $("market-note").textContent = "";
+    const pill = $("sol-pill");
+    if (pill && !(snap && snap.actor)) pill.textContent = "— SOL";
   }
 
   const MIN_SOL_LAMPORTS = 20_000_000; // ~0.02 SOL for rent + fees
@@ -680,6 +1013,69 @@
     await runOp("close", { positionIds: ids, detail: "close " + ids.join(",") });
   }
 
+  async function go() {
+    const ph = currentPhase();
+    if (ph === "connect") {
+      toast(t("reasonConnect"), "wait");
+      return;
+    }
+    if (ph === "need-sol") {
+      window.open("https://faucet.solana.com", "_blank", "noopener");
+      toast(t("feeSolHint"), "wait", 8000);
+      return;
+    }
+    if (ph === "setup") {
+      await runOp("init-user");
+      await loadState();
+      if (snap && snap.actor && !snap.actor.hasWallet) await runOp("init-wallet");
+      return;
+    }
+    if (ph === "faucet") {
+      await runOp("faucet", { detail: "demo faucet 1000 dUSD" });
+      return;
+    }
+    if (ph === "deposit") {
+      const amount = ($("cash-amt").value || "").trim();
+      const hold = snap && snap.actor ? Number(snap.actor.walletDusd || 0) : 0;
+      if (!/^\d+(\.\d+)?$/.test(amount) || Number(amount) <= 0) {
+        toast(lang === "zh" ? "入金金额须为数字，如 100。" : "Deposit amount must be a number, like 100.", "bad");
+        return;
+      }
+      if (hold > 0 && Number(amount) > hold + 1e-9) {
+        toast(lang === "zh"
+          ? "钱包里只有 " + snap.actor.walletDusd + " dUSD。把金额调小。"
+          : "Wallet only holds " + snap.actor.walletDusd + " dUSD. Lower the amount.", "bad");
+        return;
+      }
+      await runOp("deposit", { amount, detail: amount + " dUSD" });
+      return;
+    }
+    const margin = ($("margin").value || "").trim();
+    const leverage = Number($("lev").value);
+    const fundFrom = ($("fund") && $("fund").value) || "balance";
+    const maxLev = (snap && snap.desk && snap.desk.maxLeverage) || 1001;
+    if (!/^\d+(\.\d+)?$/.test(margin) || Number(margin) <= 0) {
+      toast(lang === "zh" ? "保证金须大于 0。" : "Margin must be greater than 0.", "bad");
+      return;
+    }
+    if (!Number.isFinite(leverage) || leverage < 1 || leverage > maxLev) {
+      toast((lang === "zh" ? "杠杆须为 1–" : "Leverage must be 1–") + maxLev, "bad");
+      return;
+    }
+    const bal = snap && snap.actor ? Number(snap.actor.balance || 0) : 0;
+    if (fundFrom === "balance" && Number(margin) > bal + 1e-9) {
+      toast(lang === "zh" ? "Desk 余额不够这笔保证金。先入金，或把保证金调小。" : "Desk balance is below this margin. Deposit, or lower it.", "bad");
+      return;
+    }
+    await runOp("open", {
+      side,
+      margin,
+      leverage,
+      fundFrom,
+      detail: side + " " + margin + " @" + leverage + "x",
+    });
+  }
+
   function wire() {
     $("lang-zh").addEventListener("click", () => { lang = "zh"; localStorage.setItem(LANG_KEY, lang); applyI18n(); render(); });
     $("lang-en").addEventListener("click", () => { lang = "en"; localStorage.setItem(LANG_KEY, lang); applyI18n(); render(); });
@@ -720,33 +1116,41 @@
       side = "long";
       $("side-long").classList.add("on");
       $("side-short").classList.remove("on");
+      renderPreview();
+      renderGo();
     });
     $("side-short").addEventListener("click", () => {
       side = "short";
       $("side-short").classList.add("on");
       $("side-long").classList.remove("on");
+      renderPreview();
+      renderGo();
     });
-    $("btn-open").addEventListener("click", async () => {
-      const margin = ($("margin").value || "").trim();
-      const leverage = Number($("lev").value);
-      const fundFrom = $("fund").value || "balance";
-      const maxLev = (snap && snap.desk && snap.desk.maxLeverage) || 1001;
-      if (!/^\d+(\.\d+)?$/.test(margin) || Number(margin) <= 0) {
-        toast(lang === "zh" ? "保证金须大于 0。" : "Margin must be > 0.", "bad");
-        return;
-      }
-      if (!Number.isFinite(leverage) || leverage < 1 || leverage > maxLev) {
-        toast((lang === "zh" ? "杠杆须为 1–" : "Leverage must be 1–") + maxLev, "bad");
-        return;
-      }
-      await runOp("open", {
-        side,
-        margin,
-        leverage,
-        fundFrom,
-        detail: side + " " + margin + " @" + leverage + "x",
+    document.querySelectorAll("[data-connect]").forEach((btn) => {
+      btn.addEventListener("click", () => connect(btn.getAttribute("data-connect")));
+    });
+    document.querySelectorAll(".lev-chips button").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        $("lev").value = btn.getAttribute("data-lev");
+        renderPreview();
+        renderGo();
       });
     });
+    ["margin", "lev", "cash-amt"].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      el.addEventListener("input", () => {
+        renderPreview();
+        renderGo();
+        updateNext();
+        renderSteps();
+      });
+      el.addEventListener("keydown", (ev) => {
+        if (ev.key === "Enter") go();
+      });
+    });
+    window.addEventListener("resize", () => drawChart());
+    $("btn-open").addEventListener("click", () => go());
     document.querySelectorAll("[data-market]").forEach((btn) => {
       btn.addEventListener("click", () => {
         market = btn.getAttribute("data-market");
@@ -775,6 +1179,7 @@
     } finally {
       setBusy(false);
       render();
+      requestAnimationFrame(() => drawChart());
     }
     setInterval(async () => {
       if (busy) return;
