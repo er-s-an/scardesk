@@ -1,0 +1,73 @@
+{
+  "ok": false,
+  "at": "2026-10-12T00:14:45Z",
+  "submitted": false,
+  "network": "devnet",
+  "rpc": "https://solana-devnet.api.onfinality.io/public",
+  "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+  "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "admin": "FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U",
+  "adminLamports": 0,
+  "programBytes": 215584,
+  "deployLamports": 3200000000,
+  "rent": {
+    "programDataSol": 1.50166872,
+    "bufferSol": 1.50166872,
+    "programAccountSol": 0.00114144,
+    "note": "solana rent 215629 and solana rent 36 on the local validator. Upgradeable deploy holds program data and a buffer at the same time. CLI 1.18 program deploy does not expose a non-upgradeable BPF loader v2 path."
+  },
+  "deployed": false,
+  "signatures": {},
+  "explorer": {},
+  "price": {
+    "ok": true,
+    "source": "pyth-account",
+    "cluster": "devnet",
+    "account": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+    "rpc": "https://solana-devnet.api.onfinality.io/public",
+    "feed": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+    "price": "11110344252",
+    "expo": -8,
+    "conf": "4984792",
+    "publishTime": "1791763979",
+    "hermes": 401,
+    "pythBenchmarks": 401,
+    "note": "Sponsored Pyth SOL/USD account, shard 0 of pythWSnswVUd12oZpeFP8e9CVaEqJg25g1Vtc2biRsT, read with getAccountInfo. No PYTH_API_KEY. This is not a Hermes pull. The checked-in fixture at 100 remains the fallback and is provisional."
+  },
+  "keys": "No HELIUS, QUICKNODE, or PYTH_API_KEY in the environment. Nothing was written into config.",
+  "funding": [
+    {
+      "source": "api.devnet.solana.com",
+      "result": "Unreachable. This sandbox resolves the name to 198.18.0.1. The public A record 208.115.212.49 still ends in TLS EOF. Not used as a deploy RPC."
+    },
+    {
+      "source": "OnFinality devnet",
+      "result": "Genesis matches. getBalance of the admin is 0. requestAirdrop returns Invalid request."
+    },
+    {
+      "source": "api.testnet.solana.com",
+      "result": "RPC answers. requestAirdrop for fresh keys D3shg96xELrK3vsyUnFRQi48KvgryaBByEoPPp2kRWs7, CeuhppDE8oZMmR4ZqijAo3K8Qi1jat1tmra8dqbC4kP, and 7hJVuNoQyBGM8pey4BsBhQX8ra48A7pKmHHm3psnhtGH returned 429: airdrop limit or faucet dry for this IP."
+    },
+    {
+      "source": "faucet.solana.com",
+      "result": "Turnstile verification failed. No drip. Not retried."
+    },
+    {
+      "source": "faucet.quicknode.com/solana/devnet",
+      "result": "Wallet filled, Solana Devnet selected, Continue stayed on the same form. No drip."
+    },
+    {
+      "source": "sol-devnet-fee-relay.michae2xl.workers.dev",
+      "result": "HTTP 500, provider blocked. Would have been about 0.011 SOL."
+    },
+    {
+      "source": "other public RPCs",
+      "result": "Tatum paid or Invalid request. Omniatech HTTP 521. GenesysGo not JSON. dRPC not on the free plan. Ankr needs a key. publicnode, extrnode, and blastapi did not answer a devnet airdrop. Alchemy demo 429. Helius public key 401. QuickNode and Syndica demo hosts TLS EOF."
+    },
+    {
+      "source": "fresh deployer",
+      "result": "7f6Tk3xuV1YarYsX5kieRaaka8XahCR5xMUHfEU8YMDi was created and not funded. No transfer to the admin."
+    }
+  ],
+  "error": "Not enough SOL to deploy. Admin balance is 0 lamports on OnFinality devnet. No program transaction was sent. ok stays false. Not submitted."
+}

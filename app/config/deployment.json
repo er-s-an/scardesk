@@ -1,0 +1,15 @@
+{
+  "rpc": "http://127.0.0.1:8899",
+  "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "desk": "7z22VzGm4uFncPvY2DKHKYbUESEhb6bP8AfoRt3k3WPP",
+  "dusdMint": "4Ar1dho99UN8HXh5WQEgfVFwikE2kdQL8kGtFq6mFjpJ",
+  "scarMint": "3ULF37kFcSqYYtJcRSqnFLixwz1bju7BWd2NPqzNYbGs",
+  "vault": "6kCbzQRB8qyhPnctrKjpWZmn2CmtvbC4WKbPRUocKLRP",
+  "treasury": "BNRKAuPgosZpfq78ULf2NMtxsbo5dEU4y6iK6DhNL64L",
+  "oracle": "GvgnPF5Dh5ZcSMWwgTyUrBDdJ8BsTBpu9oM5TzkMXfhG",
+  "admin": "FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U",
+  "alice": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh",
+  "bob": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF",
+  "session": "59fTvuZ4U6WQ3NLyAx26pz5yAuBwcXYzwWgPCB54qwet",
+  "network": "localnet"
+}

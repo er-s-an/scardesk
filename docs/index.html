@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scardesk — read-only preview</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="mast">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <p class="eyebrow">SOL/USD desk</p>
+        <h1>Scardesk</h1>
+      </div>
+    </div>
+    <div class="quote">
+      <div class="q-label">Mark</div>
+      <div class="q-px up">111.43189453</div>
+      <div class="q-meta">
+        <span class="pill pyth">pyth · provisional</span>
+        <span class="delta up">red = up</span>
+      </div>
+      <p class="fine px-note">Frozen read. Sponsored Pyth SOL/USD on devnet, clock-stamped onto the local desk. Hermes still needs PYTH_API_KEY. Ash is down.</p>
+    </div>
+    <div class="who-col">
+      <div class="wallets" aria-label="Wallets, disabled on this page">
+        <button type="button" disabled>Phantom</button>
+        <button type="button" disabled>Solflare</button>
+        <button type="button" disabled>Browser key</button>
+      </div>
+      <nav class="actors" aria-label="Whose desk">
+        <button type="button" class="on" disabled>Alice</button>
+        <button type="button" disabled>Bob</button>
+        <button type="button" disabled>Alice session</button>
+      </nav>
+      <p class="link-state" data-phase="idle">Read-only · localnet snapshot · nothing on this page signs</p>
+      <p class="fine">Copied from the local ledger at 2026-10-12T00:54:43Z. The live desk is the one that connects a wallet.</p>
+    </div>
+  </header>
+
+  <div class="risk" role="note">
+    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. This page is a picture of that desk. It does not send a transaction.</p>
+    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。本页只读，不签名、不结算。</p>
+  </div>
+
+  <p class="banner">Read-only preview. No wallet, no program call, no Devnet deploy. Admin on devnet was still 0 lamports at 2026-10-12T00:54:43Z, so there is no explorer signature on this page. The live desk is http://127.0.0.1:8787 while npm run desk is running. This same file is the Pages preview.</p>
+
+  <main>
+    <section class="panel" aria-labelledby="account-h">
+      <header class="ph">
+        <h2 id="account-h">Account</h2>
+        <span class="pill">owner</span>
+      </header>
+      <dl class="stats">
+        <div><dt>Balance</dt><dd>1087 dUSD</dd></div>
+        <div><dt>Queued</dt><dd>0 dUSD</dd></div>
+        <div><dt>Open</dt><dd>0</dd></div>
+        <div><dt>Queue distance</dt><dd>not in line</dd></div>
+      </dl>
+      <p class="fine">Alice · demo key · session armed. Collateral is demo stable dUSD.</p>
+      <div class="row">
+        <label>dUSD<input value="100" disabled></label>
+        <button type="button" disabled>Deposit</button>
+        <button type="button" disabled>Withdraw</button>
+      </div>
+    </section>
+
+    <section class="panel" aria-labelledby="ticket-h">
+      <header class="ph">
+        <h2 id="ticket-h">Ticket</h2>
+        <span class="pill">isolated</span>
+      </header>
+      <div class="sides">
+        <button type="button" class="side on" disabled>Long</button>
+        <button type="button" class="side" disabled>Short</button>
+      </div>
+      <div class="ticket-grid">
+        <label>Margin dUSD<input value="100" disabled></label>
+        <label>Leverage<input value="10" disabled></label>
+        <div class="preview">
+          <span>Notional</span><strong>1000 dUSD</strong>
+          <span>Liq</span><strong>live ticket</strong>
+        </div>
+      </div>
+      <button type="button" class="primary" disabled>Open position</button>
+      <p class="fine">One fill, full close. Buttons on this page are inert. A live open uses the same ticket on the desk.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="queue-h">
+      <header class="ph">
+        <h2 id="queue-h">Queue</h2>
+        <span class="pill">3 live</span>
+      </header>
+      <p class="fine">FIFO. Head is paid by the next loss before any cash reaches the LP. LP cash in this snapshot is 0, so wins are waiting.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Who</th><th>Kind</th><th>Left</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr class="head">
+              <td data-label="#">4 head</td>
+              <td data-label="Who">6NC6</td>
+              <td data-label="Kind">profit</td>
+              <td data-label="Left">12.067274</td>
+              <td data-label="">active · pos 0</td>
+            </tr>
+            <tr>
+              <td data-label="#">5</td>
+              <td data-label="Who">FyVU</td>
+              <td data-label="Kind">profit</td>
+              <td data-label="Left">19.6</td>
+              <td data-label="">active · pos 0</td>
+            </tr>
+            <tr>
+              <td data-label="#">6</td>
+              <td data-label="Who">81Wm</td>
+              <td data-label="Kind">profit</td>
+              <td data-label="Left">18.375</td>
+              <td data-label="">active · pos 1</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <dl class="stats slim">
+        <div><dt>LP cash</dt><dd>0</dd></div>
+        <div><dt>Free LP</dt><dd>0</dd></div>
+        <div><dt>Reserved fees</dt><dd>0</dd></div>
+        <div><dt>Vault</dt><dd>2499</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel" aria-labelledby="pos-h">
+      <header class="ph">
+        <h2 id="pos-h">Positions</h2>
+        <span class="pill">mark 111.43189453</span>
+      </header>
+      <div class="scroll">
+        <table class="wide">
+          <thead>
+            <tr>
+              <th>Id</th><th>Who</th><th>Side</th><th>Lev</th><th>Margin</th>
+              <th>Entry</th><th>uPnL</th><th>Liq</th><th>Fund</th><th>SCAR</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="mine win">
+              <td data-label="Id">0</td>
+              <td data-label="Who">Alice</td>
+              <td class="side-long" data-label="Side">long</td>
+              <td data-label="Lev">10×</td>
+              <td data-label="Margin">100</td>
+              <td data-label="Entry">100</td>
+              <td class="up" data-label="uPnL">+100</td>
+              <td data-label="Liq">95</td>
+              <td data-label="Fund">balance</td>
+              <td data-label="SCAR">—</td>
+              <td data-label="Status">closed</td>
+              <td data-label="">—</td>
+            </tr>
+            <tr class="mine loss">
+              <td data-label="Id">1</td>
+              <td data-label="Who">Alice</td>
+              <td class="side-long" data-label="Side">long</td>
+              <td data-label="Lev">1000×</td>
+              <td data-label="Margin">10</td>
+              <td data-label="Entry">100</td>
+              <td class="dn" data-label="uPnL">-6</td>
+              <td data-label="Liq">99.95</td>
+              <td data-label="Fund">balance</td>
+              <td data-label="SCAR">1000</td>
+              <td data-label="Status">liquidated</td>
+              <td data-label="">—</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fine">Red bar is a positive settle. Ash bar is the 1000× liquidation, which minted SCAR. Alice has no open position in this snapshot. Older rows stay on the live desk.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="scar-h">
+      <header class="ph">
+        <h2 id="scar-h">SCAR</h2>
+        <span class="pill">supply 16477.2726</span>
+      </header>
+      <dl class="stats">
+        <div><dt>Free</dt><dd>1000</dd></div>
+        <div><dt>Staked</dt><dd>0</dd></div>
+        <div><dt>Pending</dt><dd>0 dUSD</dd></div>
+        <div><dt>Minted to you</dt><dd>1000</dd></div>
+      </dl>
+      <p class="fine">Alice's free SCAR is the 1000× liquidation. The token does not transfer. This page cannot stake or claim.</p>
+    </section>
+
+    <section class="panel" aria-labelledby="agent-h">
+      <header class="ph">
+        <h2 id="agent-h">Agent log</h2>
+        <span class="pill">not live</span>
+      </header>
+      <p class="fine">The live log is on the desk. This list is the shape of the loop, not a new signature.</p>
+      <ol class="log">
+        <li><time>frozen</time><span class="tool">positions.close</span><span>Loss mints SCAR, then pays the queue head.</span></li>
+        <li><time>frozen</time><span class="tool">positions.close</span><span>A win the LP cannot fund writes a FIFO node.</span></li>
+        <li class="bad"><time>frozen</time><span class="tool">withdraw</span><span>Session key is rejected. Balance stays put.</span></li>
+      </ol>
+    </section>
+  </main>
+
+  <footer>
+    <p>Scardesk is an independent experiment. Not affiliated with papertrade.xyz.</p>
+    <p>Demo stable on localnet. Same settlement rules. Not mainnet funds. Public program not deployed.</p>
+    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
+    <p class="addrs">Snapshot 2026-10-12T00:54:43Z · local validator was http://127.0.0.1:8899 · devnet admin FvrGAbpFVJXdhfzE3NFNbimKNag7vFubykBvMKUKh89U had 0 lamports · no explorer link is invented here.</p>
+  </footer>
+</body>
+</html>

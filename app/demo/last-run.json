@@ -1,0 +1,366 @@
+{
+  "hermes": {
+    "ok": false,
+    "status": 401
+  },
+  "signatures": {
+    "queueWrite": "4gLDdW66LjoTgQMmCrKVS51G9tqdQrnasQLukzfwPbHij8qWCxdeypfUNcKiqukUYRQxzysq4ByEr6M5M8sETGvF",
+    "scarMint": "iKTGnY171uiC735bWaqnYoXKCTZHuTjWh8miZQtqEUP7biZr99YdSFuA51DeKtRuNAbsouSfAYM8nrbYT2NMZ37"
+  },
+  "events": [
+    {
+      "name": "oracle_push",
+      "fields": {
+        "price": "10000000000",
+        "time": "1791741935"
+      },
+      "line": "Program log: evt=oracle_push;price=10000000000;time=1791741935"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "10000000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=10000000000;expo=-8"
+    },
+    {
+      "name": "open",
+      "fields": {
+        "pos": "0",
+        "side": "0",
+        "margin": "100000000",
+        "lev": "10",
+        "entry": "10000000000",
+        "liq": "9500000000",
+        "fund": "0"
+      },
+      "line": "Program log: evt=open;pos=0;side=0;margin=100000000;lev=10;entry=10000000000;liq=9500000000;fund=0"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "11000000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=11000000000;expo=-8"
+    },
+    {
+      "name": "queue_write",
+      "fields": {
+        "index": "0",
+        "amount": "98000000",
+        "pos": "0",
+        "kind": "0",
+        "user": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+      },
+      "line": "Program log: evt=queue_write;index=0;amount=98000000;pos=0;kind=0;user=CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "0",
+        "status": "1",
+        "pnl": "100000000",
+        "fee": "2000000",
+        "paid": "0",
+        "queued": "98000000",
+        "scar": "0",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=0;status=1;pnl=100000000;fee=2000000;paid=0;queued=98000000;scar=0;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "10560000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=10560000000;expo=-8"
+    },
+    {
+      "name": "scar_minted",
+      "fields": {
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF",
+        "amount": "8000000000",
+        "pos": "0",
+        "loss": "80000000"
+      },
+      "line": "Program log: evt=scar_minted;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF;amount=8000000000;pos=0;loss=80000000"
+    },
+    {
+      "name": "queue_pay",
+      "fields": {
+        "index": "0",
+        "amount": "80000000",
+        "user": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+      },
+      "line": "Program log: evt=queue_pay;index=0;amount=80000000;user=CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "0",
+        "status": "1",
+        "pnl": "-80000000",
+        "fee": "0",
+        "paid": "0",
+        "queued": "0",
+        "scar": "8000000000",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=0;status=1;pnl=-80000000;fee=0;paid=0;queued=0;scar=8000000000;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "10243200000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=10243200000;expo=-8"
+    },
+    {
+      "name": "scar_minted",
+      "fields": {
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF",
+        "amount": "3000000000",
+        "pos": "1",
+        "loss": "30000000"
+      },
+      "line": "Program log: evt=scar_minted;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF;amount=3000000000;pos=1;loss=30000000"
+    },
+    {
+      "name": "queue_pay",
+      "fields": {
+        "index": "0",
+        "amount": "18000000",
+        "user": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+      },
+      "line": "Program log: evt=queue_pay;index=0;amount=18000000;user=CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "1",
+        "status": "1",
+        "pnl": "-30000000",
+        "fee": "0",
+        "paid": "0",
+        "queued": "0",
+        "scar": "3000000000",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=1;status=1;pnl=-30000000;fee=0;paid=0;queued=0;scar=3000000000;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "9994000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=9994000000;expo=-8"
+    },
+    {
+      "name": "scar_minted",
+      "fields": {
+        "user": "CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh",
+        "amount": "1000000000",
+        "pos": "1",
+        "loss": "10000000"
+      },
+      "line": "Program log: evt=scar_minted;user=CKiKJNeMVf12owES7YiUNmxh6A13sTv1smetAoAPpmQh;amount=1000000000;pos=1;loss=10000000"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "1",
+        "status": "2",
+        "pnl": "-6000000",
+        "fee": "0",
+        "paid": "0",
+        "queued": "0",
+        "scar": "1000000000",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=1;status=2;pnl=-6000000;fee=0;paid=0;queued=0;scar=1000000000;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "12500000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=12500000000;expo=-8"
+    },
+    {
+      "name": "queue_write",
+      "fields": {
+        "index": "1",
+        "amount": "27440000",
+        "pos": "2",
+        "kind": "0",
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+      },
+      "line": "Program log: evt=queue_write;index=1;amount=27440000;pos=2;kind=0;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "2",
+        "status": "1",
+        "pnl": "50000000",
+        "fee": "1000000",
+        "paid": "21560000",
+        "queued": "27440000",
+        "scar": "0",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=2;status=1;pnl=50000000;fee=1000000;paid=21560000;queued=27440000;scar=0;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "12500000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=12500000000;expo=-8"
+    },
+    {
+      "name": "queue_write",
+      "fields": {
+        "index": "2",
+        "amount": "10000000",
+        "pos": "3",
+        "kind": "1",
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+      },
+      "line": "Program log: evt=queue_write;index=2;amount=10000000;pos=3;kind=1;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "3",
+        "status": "1",
+        "pnl": "0",
+        "fee": "0",
+        "paid": "0",
+        "queued": "10000000",
+        "scar": "0",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=3;status=1;pnl=0;fee=0;paid=0;queued=10000000;scar=0;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "12493750000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=12493750000;expo=-8"
+    },
+    {
+      "name": "scar_minted",
+      "fields": {
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF",
+        "amount": "1000000000",
+        "pos": "4",
+        "loss": "10000000"
+      },
+      "line": "Program log: evt=scar_minted;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF;amount=1000000000;pos=4;loss=10000000"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "4",
+        "status": "2",
+        "pnl": "-5000000",
+        "fee": "0",
+        "paid": "0",
+        "queued": "0",
+        "scar": "1000000000",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=4;status=2;pnl=-5000000;fee=0;paid=0;queued=0;scar=1000000000;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "pyth",
+        "price": "9000000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=pyth;price=9000000000;expo=-8"
+    },
+    {
+      "name": "queue_write",
+      "fields": {
+        "index": "3",
+        "amount": "9800000",
+        "pos": "5",
+        "kind": "0",
+        "user": "5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+      },
+      "line": "Program log: evt=queue_write;index=3;amount=9800000;pos=5;kind=0;user=5MgxEm6SaTzqcADQjajNGLuF2G5CfEGu7phVD2AW5zCF"
+    },
+    {
+      "name": "settle",
+      "fields": {
+        "pos": "5",
+        "status": "1",
+        "pnl": "10000000",
+        "fee": "200000",
+        "paid": "0",
+        "queued": "9800000",
+        "scar": "0",
+        "src": "1"
+      },
+      "line": "Program log: evt=settle;pos=5;status=1;pnl=10000000;fee=200000;paid=0;queued=9800000;scar=0;src=1"
+    },
+    {
+      "name": "price",
+      "fields": {
+        "source": "fixture",
+        "price": "8000000000",
+        "expo": "-8"
+      },
+      "line": "Program log: evt=price;source=fixture;price=8000000000;expo=-8"
+    },
+    {
+      "name": "open",
+      "fields": {
+        "pos": "2",
+        "side": "0",
+        "margin": "2000000",
+        "lev": "2",
+        "entry": "8000000000",
+        "liq": "6000000000",
+        "fund": "0"
+      },
+      "line": "Program log: evt=open;pos=2;side=0;margin=2000000;lev=2;entry=8000000000;liq=6000000000;fund=0"
+    },
+    {
+      "name": "withdraw",
+      "fields": {
+        "amount": "1000000",
+        "balance": "1087000000"
+      },
+      "line": "Program log: evt=withdraw;amount=1000000;balance=1087000000"
+    }
+  ],
+  "scarSupply": "13000000000",
+  "totalScar": "13000000000",
+  "desk": "7z22VzGm4uFncPvY2DKHKYbUESEhb6bP8AfoRt3k3WPP",
+  "programId": "E7kH2K4YGgcRpQergDAwyHhD7giLvPKbN2SqZk8WXF4b",
+  "scarMint": "3ULF37kFcSqYYtJcRSqnFLixwz1bju7BWd2NPqzNYbGs",
+  "queueWrite": "4gLDdW66LjoTgQMmCrKVS51G9tqdQrnasQLukzfwPbHij8qWCxdeypfUNcKiqukUYRQxzysq4ByEr6M5M8sETGvF",
+  "scarMintSig": "iKTGnY171uiC735bWaqnYoXKCTZHuTjWh8miZQtqEUP7biZr99YdSFuA51DeKtRuNAbsouSfAYM8nrbYT2NMZ37",
+  "finishedAt": "2026-10-11T18:09:06.779Z"
+}

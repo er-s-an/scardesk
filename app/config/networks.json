@@ -1,0 +1,23 @@
+{
+  "localnet": {
+    "rpc": "http://127.0.0.1:8899",
+    "cluster": "custom"
+  },
+  "devnet": {
+    "rpc": "https://solana-devnet.api.onfinality.io/public",
+    "cluster": "devnet",
+    "genesis": "EtWTRABZaYq6iMfeYKouRu166VU2xqa1wcaWoxPkrZBG",
+    "note": "This sandbox resolves api.devnet.solana.com to 198.18.0.1. The public A record is 208.115.212.49, and a request pinned to that IP still ends in TLS EOF. OnFinality answers getBalance and getGenesisHash. requestAirdrop returns Invalid request. Upgradeable deploy of the 215584-byte program needs about 3.2 SOL."
+  },
+  "testnet": {
+    "rpc": "https://api.testnet.solana.com",
+    "cluster": "testnet",
+    "genesis": "4uhcVJyU9pJkvQyS88uRDiswHXSCkY3zQawwpjk2NsNY"
+  },
+  "mainnet-beta": {
+    "rpc": "https://api.mainnet-beta.solana.com",
+    "cluster": "mainnet-beta",
+    "genesis": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+    "refused": true
+  }
+}

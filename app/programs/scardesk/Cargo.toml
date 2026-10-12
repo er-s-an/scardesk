@@ -1,0 +1,38 @@
+[package]
+name = "scardesk"
+version = "0.1.0"
+edition = "2021"
+description = "Scardesk synthetic perps: Martingaler LP, FIFO queue, SCAR loss-mint, session key"
+license = "MIT"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "scardesk"
+
+[features]
+no-entrypoint = []
+test-sbf = []
+
+[dependencies]
+solana-program = "=1.18.26"
+spl-token = { version = "=4.0.3", features = ["no-entrypoint"] }
+# solana-program 1.18 asks for blake3 ^1.5. Newer 1.8.x pulls digest 0.11 / ctutils,
+# which need a newer rustc than the one paired with this Solana CLI.
+blake3 = { version = "=1.5.1", features = ["digest"] }
+
+[dev-dependencies]
+# Version pins only. Not linked into the program. They keep platform-tools v1.41
+# (rustc 1.75) on crates that do not need edition 2024. Newer codegen writes r10,
+# which the 1.18 verifier rejects.
+borsh = "=1.5.7"
+proc-macro-crate = "=3.1.0"
+toml_edit = "=0.21.1"
+indexmap = "=2.2.6"
+cc = "=1.0.99"
+jobserver = "=0.1.32"
+zeroize_derive = "=1.4.2"
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1

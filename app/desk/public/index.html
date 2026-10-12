@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Scardesk — SOL/USD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Newsreader:opsz,wght@6..72,500;6..72,650&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div id="stamp" class="stamp" hidden>SCAR<br>MINTED</div>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <header class="mast">
+    <div class="brand">
+      <span class="mark" aria-hidden="true"></span>
+      <div>
+        <p class="eyebrow">SOL/USD desk</p>
+        <h1>Scardesk</h1>
+      </div>
+    </div>
+    <div class="quote" id="quote">
+      <div class="q-label">Mark</div>
+      <div class="q-px" id="px">—</div>
+      <div class="q-meta">
+        <span id="src" class="pill">—</span>
+        <span id="delta" class="delta">—</span>
+      </div>
+      <p class="fine px-note" id="px-note">Price not loaded.</p>
+    </div>
+    <div class="who-col">
+      <div class="wallets" id="wallets" aria-label="Connect a wallet">
+        <button type="button" id="btn-phantom">Phantom</button>
+        <button type="button" id="btn-solflare">Solflare</button>
+        <button type="button" id="btn-burner">Browser key</button>
+        <button type="button" id="btn-disconnect" hidden>Disconnect</button>
+      </div>
+      <nav class="actors" id="actors" aria-label="Whose desk">
+        <button type="button" data-actor="wallet" id="btn-actor-wallet" hidden>Mine</button>
+        <button type="button" data-actor="alice" class="on">Alice</button>
+        <button type="button" data-actor="bob">Bob</button>
+        <button type="button" data-actor="session">Alice session</button>
+      </nav>
+      <p class="link-state" id="link-state" role="status" data-phase="idle">Desk not loaded.</p>
+      <p class="fine" id="wallet-line">Connect Phantom, Solflare, or a browser key. The browser key uses the same sign path. It is not the extension.</p>
+    </div>
+  </header>
+
+  <div class="risk" role="note">
+    <p><strong>Synthetic perps · Loss-funded LP · FIFO payouts.</strong> Isolated margin only. No partial close, no top-up. A loss mints SCAR and pays the queue, then the LP. A win the LP cannot cover waits in line. At 1000× a few basis points liquidate the whole margin.</p>
+    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
+  </div>
+
+  <p id="banner" class="banner" hidden></p>
+
+  <main>
+    <section id="account" class="panel" aria-labelledby="account-h">
+      <header class="ph">
+        <h2 id="account-h">Account</h2>
+        <span id="role" class="pill">—</span>
+      </header>
+      <dl class="stats">
+        <div><dt>Balance</dt><dd id="bal">—</dd></div>
+        <div><dt>Queued</dt><dd id="queued">—</dd></div>
+        <div><dt>Open</dt><dd id="opens">—</dd></div>
+        <div><dt>Queue distance</dt><dd id="qdist">—</dd></div>
+      </dl>
+      <p class="fine" id="who">Owner and signer appear after the desk loads.</p>
+      <p class="fine" id="session-note"></p>
+      <div class="row">
+        <label>dUSD<input id="cash-amt" inputmode="decimal" value="100"></label>
+        <button type="button" id="btn-deposit">Deposit</button>
+        <button type="button" id="btn-withdraw">Withdraw</button>
+      </div>
+      <p class="fine warn" id="cash-note" hidden></p>
+      <div class="row">
+        <button type="button" id="btn-faucet" class="ghost">Faucet 1000 dUSD</button>
+        <button type="button" id="btn-sol" class="ghost">Fee SOL</button>
+        <button type="button" id="btn-arm" class="ghost">Arm session</button>
+        <button type="button" id="btn-clear" class="ghost">Clear session</button>
+        <button type="button" id="btn-as" class="ghost">Trade as session</button>
+      </div>
+      <p class="fine">Faucet mints demo stable into the wallet, then you deposit. It does not edit a position or mint SCAR.</p>
+    </section>
+
+    <section id="ticket" class="panel" aria-labelledby="ticket-h">
+      <header class="ph">
+        <h2 id="ticket-h">Ticket</h2>
+        <span class="pill">isolated</span>
+      </header>
+      <div class="sides" role="group" aria-label="Side">
+        <button type="button" id="side-long" class="side on" data-side="long">Long</button>
+        <button type="button" id="side-short" class="side" data-side="short">Short</button>
+      </div>
+      <div class="ticket-grid">
+        <label>Margin dUSD
+          <input id="margin" inputmode="decimal" value="100">
+        </label>
+        <label>Leverage
+          <input id="lev" type="number" min="1" max="1000" value="10">
+        </label>
+        <label class="span">Leverage rail
+          <input id="lev-range" type="range" min="1" max="1000" value="10">
+        </label>
+        <label>Fund from
+          <select id="fund">
+            <option value="balance">balance</option>
+            <option value="queued">queued claim</option>
+          </select>
+        </label>
+        <div class="preview">
+          <span>Notional</span><strong id="prev-notional">—</strong>
+          <span>Liq</span><strong id="prev-liq">—</strong>
+        </div>
+      </div>
+      <p class="fine warn" id="ticket-note" hidden></p>
+      <button type="button" id="btn-open" class="primary">Open position</button>
+      <p class="fine">One fill, full close. Notional = margin × leverage. Liquidation price uses the provisional fraction on the desk. Crossing it forfeits the whole isolated margin.</p>
+    </section>
+
+    <section id="queue" class="panel" aria-labelledby="queue-h">
+      <header class="ph">
+        <h2 id="queue-h">Queue</h2>
+        <span id="qlen" class="pill">0</span>
+      </header>
+      <p class="fine" id="qahead">FIFO. Head is paid by the next loss before any cash reaches the LP.</p>
+      <div class="scroll">
+        <table>
+          <thead>
+            <tr><th>#</th><th>Who</th><th>Kind</th><th>Left</th><th></th></tr>
+          </thead>
+          <tbody id="qbody"></tbody>
+        </table>
+      </div>
+      <dl class="stats slim">
+        <div><dt>LP cash</dt><dd id="lp">—</dd></div>
+        <div><dt>Free LP</dt><dd id="lpfree">—</dd></div>
+        <div><dt>Reserved fees</dt><dd id="reserved">—</dd></div>
+        <div><dt>Vault</dt><dd id="vault">—</dd></div>
+      </dl>
+    </section>
+
+    <section id="positions" class="panel" aria-labelledby="pos-h">
+      <header class="ph">
+        <h2 id="pos-h">Positions</h2>
+        <span id="mark-note" class="pill">mark</span>
+      </header>
+      <div class="scroll">
+        <table class="wide">
+          <thead>
+            <tr>
+              <th>Id</th><th>Who</th><th>Side</th><th>Lev</th><th>Margin</th>
+              <th>Entry</th><th>uPnL</th><th>Liq</th><th>Fund</th><th>SCAR</th><th>Status</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="pbody"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="scar" class="panel" aria-labelledby="scar-h">
+      <header class="ph">
+        <h2 id="scar-h">SCAR</h2>
+        <span id="supply" class="pill">supply —</span>
+      </header>
+      <dl class="stats">
+        <div><dt>Free</dt><dd id="scar-free">—</dd></div>
+        <div><dt>Staked</dt><dd id="scar-staked">—</dd></div>
+        <div><dt>Pending</dt><dd id="scar-pending">—</dd></div>
+        <div><dt>Minted to you</dt><dd id="scar-bal">—</dd></div>
+      </dl>
+      <p class="fine">Provisional emission: 100 SCAR per 1 dUSD of qualified loss while the tracked LP is small. SCAR is a program credit. Supply sits in a desk-owned treasury. No user token account is created, so it does not transfer.</p>
+      <div class="row">
+        <label>Amount<input id="scar-amt" inputmode="decimal" value="100"></label>
+        <button type="button" id="btn-stake">Stake</button>
+        <button type="button" id="btn-unstake" class="ghost">Unstake</button>
+        <button type="button" id="btn-claim">Claim</button>
+      </div>
+      <p class="fine">Pending = claimable + unharvested acc. Claim pays demo stable from reserved fees into your balance. Stake before a payable win if you want the fee to accrue to you.</p>
+    </section>
+
+    <section id="agent" class="panel" aria-labelledby="agent-h">
+      <header class="ph">
+        <h2 id="agent-h">Agent log</h2>
+        <span class="pill">session key</span>
+      </header>
+      <p class="fine">Tools follow a Circuit-shaped surface and are self-built. <code>paper.stake</code>, <code>paper.unstake</code>, and <code>paper.claim</code> are those API names. The token is SCAR. There is no balance editor and no free mint. The session key may open and close. Withdraw, stake, and claim are rejected on chain.</p>
+      <div class="tools" id="tools"></div>
+      <div class="agent-form">
+        <label>Tool
+          <select id="agent-tool"></select>
+        </label>
+        <label>Args JSON
+          <input id="agent-args" value='{"side":"long","margin":"5","leverage":3,"fundFrom":"balance"}'>
+        </label>
+        <button type="button" id="btn-agent">Run as session</button>
+      </div>
+      <ol id="log" class="log"></ol>
+      <div id="proofs" class="proofs" hidden></div>
+    </section>
+  </main>
+
+  <details class="operator">
+    <summary>Operator rail — push the oracle or the fixture. Separate from agent tools.</summary>
+    <div class="row">
+      <label>Price USD<input id="op-px" inputmode="decimal" value="100"></label>
+      <button type="button" id="btn-oracle">Push Pyth path</button>
+      <button type="button" id="btn-fixture" class="ghost">Set fixture</button>
+      <button type="button" id="btn-stale" class="ghost">Mark oracle stale</button>
+    </div>
+    <p class="fine">A fresh push is the mid. If publish time is older than the desk max age, opens use the fixture and the log says <code>source=fixture</code>. Pushing a price is an oracle write, not a PnL edit.</p>
+  </details>
+
+  <footer>
+    <p>Scardesk is an independent experiment. Not affiliated with papertrade.xyz. <a href="/preview.html">Read-only preview</a></p>
+    <p id="net-line">Demo stable. Same settlement rules. Not mainnet funds.</p>
+    <p class="zh">高杠杆合成衍生品机制演示；非投顾；可能亏损本金；队列兑付依赖后续流入。</p>
+    <p id="addrs" class="addrs"></p>
+  </footer>
+  <script src="/wallet.js"></script>
+  <script src="/app.js"></script>
+</body>
+</html>

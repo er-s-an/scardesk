@@ -1,0 +1,22 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --check client/src/math.js && node --check client/src/layout.js && node --check client/src/chain.js && node --check client/src/agent.js && node --check scripts/verify.js && node --check desk/server.js && node --check desk/public/app.js",
+    "verify": "node scripts/verify.js",
+    "desk": "node desk/server.js",
+    "wallet": "esbuild desk/wallet-entry.js --bundle --format=iife --platform=browser --target=es2020 --outfile=desk/public/wallet.js",
+    "proof": "node scripts/public-proof.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@solana/web3.js": "^1.95.8"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2"
+  }
+}

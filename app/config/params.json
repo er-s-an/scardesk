@@ -1,0 +1,15 @@
+{
+  "market": "SOL/USD",
+  "maxLeverage": 1000,
+  "haircutBps": 200,
+  "liqFractionBps": 5000,
+  "minMargin": "1000000",
+  "emission": "100",
+  "oracleMaxAge": "120",
+  "fixturePrice": "10000000000",
+  "fixtureExpo": -8,
+  "dusdDecimals": 6,
+  "scarDecimals": 6,
+  "priceExpo": -8,
+  "notes": "All money is 6-decimal demo stable (dUSD). Prices are expo -8. These constants are provisional; see README."
+}

@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "source": "pyth-account-pro",
+  "cluster": "devnet",
+  "account": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+  "rpc": "https://solana-devnet.api.onfinality.io/public",
+  "feed": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+  "price": "11158754658",
+  "expo": -8,
+  "conf": "3515928",
+  "publishTime": "1791776848",
+  "attempts": [
+    {
+      "source": "hermes",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-benchmarks",
+      "status": 401,
+      "error": "unauthorized"
+    },
+    {
+      "source": "pyth-account",
+      "cluster": "devnet",
+      "account": "7UVimffxr9ow1uXYxsr4LHAcV58mLzhmwaeKvJ1pjLiE",
+      "error": "publish_time age 313s",
+      "publishTime": "1791776589"
+    },
+    {
+      "source": "pyth-account-pro",
+      "cluster": "devnet",
+      "account": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+      "status": 200
+    }
+  ],
+  "note": "Sponsored Pyth price-feed account on devnet. Hermes still returns 401 without PYTH_API_KEY. The Pyth publish time is outside this cluster clock, so the desk stored the price and let the program stamp the cluster clock.",
+  "clamped": true,
+  "clusterNow": "1791771777",
+  "sig": "5ZFcFVyGBw6zc2PsKov8gteACWpDoEkqHUYtaeC2broLpiMwrucPFY5dw1D7Qt7aD5QVMufA7u2LPJNgJwV75frR",
+  "pushedPublishTime": "0",
+  "at": "2026-10-12T03:48:23.106Z"
+}

@@ -1,0 +1,7 @@
+{
+  "market": "SOL/USD",
+  "hermesId": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+  "expo": -8,
+  "snapshotPrice": "10000000000",
+  "note": "Provisional fixture level used when Hermes and the sponsored Pyth account are both unreadable. Hermes has required PYTH_API_KEY since 2026-08-26. The live path reads shard 0 of the Pyth push oracle on devnet. A stale publish_time falls back to this fixture."
+}
