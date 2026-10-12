@@ -831,6 +831,9 @@ body.trade main.trade-grid {
     "chart ticket"
     "positions positions"
     "account account"
+    "history history"
+    "session session"
+    "scar scar"
     "log log";
   gap: 12px;
   align-items: start;
@@ -838,6 +841,10 @@ body.trade main.trade-grid {
 }
 body.trade #chart { grid-area: chart; }
 body.trade #ticket { grid-area: ticket; }
+body.trade #history { grid-area: history; }
+body.trade #session { grid-area: session; }
+body.trade #scar { grid-area: scar; }
+body.trade main.trade-grid > .panel { min-width: 0; max-width: 100%; }
 body.trade [hidden] { display: none !important; }
 body.trade label { text-transform: none; letter-spacing: 0.04em; }
 body.trade .connect-row button {
@@ -997,16 +1004,26 @@ body.trade .pos td .ghost { min-height: 36px; }
   body.trade .trade-risk,
   body.trade footer { margin-left: 16px; margin-right: 16px; }
   body.trade main.trade-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
       "ticket"
       "chart"
       "positions"
       "account"
+      "history"
+      "session"
+      "scar"
       "log";
     padding: 0 16px 20px;
     width: 100%;
     max-width: 100%;
+    box-sizing: border-box;
+  }
+  body.trade main.trade-grid > .panel {
+    grid-column: 1 / -1;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
     box-sizing: border-box;
   }
   body.trade #ticket { position: static; min-width: 0; }
